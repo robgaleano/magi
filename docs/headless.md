@@ -6,13 +6,15 @@ Running the server on a Mac with no monitor attached and using it from other dev
 
 | Path | How |
 | :--- | :--- |
-| **Tailscale** | All devices on one tailnet. Nothing is port-forwarded on the router; the MAGI server answers only to localhost and Tailscale addresses (`100.64.0.0/10`, `fd7a:115c:a1e0::/48`) and returns HTTP 403 to other LAN clients. |
-| **SSH / Moshi** | macOS Remote Login is on. The [Moshi](https://getmoshi.app) iOS app connects over SSH/mosh, and `moshi-hook` (Homebrew service, `127.0.0.1:24543` only) forwards agent events and approval prompts as push notifications. |
-| **Screen Sharing** | macOS Screen Sharing is on; connect with `vnc://<mac-tailscale-ip>`. A virtual-display app (e.g. BetterDisplay) keeps a normal resolution with no monitor attached. |
-| **Telegram** | Akari's Hermes gateway runs a Telegram bot restricted to an allow-list of user IDs (`TELEGRAM_ALLOWED_USERS` in `~/.hermes/.env`). Supports text, voice notes (transcribed locally) and slash commands such as `/status`, `/compress`, `/effort`, `/cron`. |
+| **Tailscale** | Put all devices on one tailnet. Don't port-forward anything on the router. The MAGI server answers only to localhost and Tailscale addresses and requires the API key — [security.md](security.md). |
+| **SSH / Moshi** | Turn on Remote Login (System Settings → General → Sharing) and use key-based login. The [Moshi](https://getmoshi.app) iOS app connects over SSH/mosh; `moshi-hook` (Homebrew service, bound to `127.0.0.1` only) forwards agent events and approval prompts as push notifications. |
+| **Screen Sharing** | Turn on Screen Sharing in the same panel and connect with `vnc://<mac-tailscale-ip>`. A virtual-display app (e.g. BetterDisplay) keeps a normal resolution with no monitor attached. |
+| **Telegram** | Akari's Hermes gateway can run a Telegram bot. Always restrict it to your own user ID (`TELEGRAM_ALLOWED_USERS` in `~/.hermes/.env`) — anyone who can message the bot can drive the agent. Supports text, voice notes (transcribed locally) and slash commands such as `/status`, `/compress`, `/effort`, `/cron`. |
 | **Hermes web UI** (optional, not enabled) | `hermes dashboard` serves on `127.0.0.1:9119`; `tailscale serve --bg --https 9443 http://127.0.0.1:9119` would expose it to the tailnet only. |
 
-To use the model from another computer, point its clients at `http://<mac-tailscale-ip>:8080/v1`.
+To use the model from another computer, point its clients at `http://<mac-tailscale-ip>:8080/v1` with the API key.
+
+Once everything works over Tailscale, run [`server/hardening/lan-lockdown.sh`](../server/hardening/lan-lockdown.sh) so SSH, Screen Sharing, the model server and mosh are unreachable from the local network ([security.md](security.md#network-access)).
 
 ## Services
 

@@ -45,4 +45,4 @@ It also keeps the GPU limit in sync with the model state — see [docs/memory.md
 
 Builds `mlx-menubar.swift` with `swiftc`, ad-hoc signs it, installs it as `$MLX_HOME/mlx-menubar` and registers `~/Library/LaunchAgents/com.local.mlx-menubar.plist` so it starts at every login. Re-run after editing the Swift file.
 
-Requires Xcode Command Line Tools. Polls `http://127.0.0.1:8080/v1/metrics` once a second; the live tok/s needs the server patch in [`server/patches/`](../server/patches).
+Requires Xcode Command Line Tools. Polls `http://127.0.0.1:8080/v1/metrics` once a second, sending the key from `~/.config/magi/api-key` (or `$MAGI_API_KEY_FILE`); the live tok/s needs the server patch in [`server/patches/`](../server/patches).

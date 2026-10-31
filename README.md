@@ -48,12 +48,13 @@ cd ~/llm/magi
 ./server/install.sh            # Python env + patched mlx-vlm + ~30 GB of weights + launchd service
 mlx-ctl setup-memory-limit     # once: lets the GPU use all but 16 GiB of memory (admin password)
 ./menubar/install.sh           # menu bar app, starts at every login
+sudo ./server/hardening/lan-lockdown.sh install   # recommended: Tailscale/localhost-only access
 
 mlx-ctl mount                  # load the model
 mlx-ctl status
 ```
 
-The server then answers on `http://127.0.0.1:8080/v1` (OpenAI API) and `http://127.0.0.1:8080/v1/messages` (Anthropic API). Details: [docs/setup.md](docs/setup.md).
+The server then answers on `http://127.0.0.1:8080/v1` (OpenAI API) and `http://127.0.0.1:8080/v1/messages` (Anthropic API). Every request needs the API key the installer created in `~/.config/magi/api-key` ([docs/security.md](docs/security.md)). Details: [docs/setup.md](docs/setup.md).
 
 ## Menu bar
 
@@ -96,6 +97,7 @@ How the GPU limit, prompt cache and idle-memory fix work: [docs/memory.md](docs/
 - [Benchmarks](docs/benchmarks.md): every measurement and how to repeat it
 - [Clients](docs/clients.md): Akari (Hermes Agent), Claude Code, DeepSeek Harness, Roo Code
 - [Headless operation](docs/headless.md): remote access, Telegram, sleep and reboot behaviour
+- [Security](docs/security.md): API key, network access, firewall, what stays out of the repo
 - [Troubleshooting](docs/troubleshooting.md): problems hit while building this, and their fixes
 
 ## Test machine
@@ -109,7 +111,7 @@ Decode speed on Apple Silicon is mostly limited by memory bandwidth (every gener
 ## Credits and licence
 
 - **Swift 1.5** by [UkisAI](https://huggingface.co/ukisai/Swift-1.5-Qwen3.8-27b) (Swift Open License v1.0), based on **Qwen3.8-27B** by the Qwen team. The converted weights on Hugging Face keep the original licence files.
-- **[MLX](https://github.com/ml-explore/mlx)** by Apple and **[mlx-vlm](https://github.com/Blaizzy/mlx-vlm)** by Prince Canuma, both MIT. `server/patches/` contains changes to `mlx-vlm` under its MIT licence.
+- **[MLX](https://github.com/ml-explore/mlx)** by Apple and **[mlx-vlm](https://github.com/Blaizzy/mlx-vlm)** by Prince Canuma, both MIT. `server/patches/` contains changes to `mlx-vlm`; its licence is in [`server/patches/LICENSE-mlx-vlm`](server/patches/LICENSE-mlx-vlm).
 - **[Hermes Agent](https://github.com/NousResearch/hermes-agent)** by Nous Research.
 - Code and docs in this repo: [MIT](LICENSE).
 - `assets/akari.png`: avatar of Akari (灯り, "light"), an original AI-generated character made for this project.

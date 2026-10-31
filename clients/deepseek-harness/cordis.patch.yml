@@ -11,7 +11,7 @@
     providers:
       local-mlx:
         displayName: Local MLX (M5 Max 128GB)
-        apiKeyEnv: LOCAL_MLX_API_KEY
+        apiKeyEnv: LOCAL_MLX_API_KEY   # set to the contents of ~/.config/magi/api-key (e.g. in ~/.dsh/.credentials.yaml)
         api: openai-completions
         baseURL: http://127.0.0.1:8080/v1
         reasoning: high

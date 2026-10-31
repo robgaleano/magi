@@ -2,6 +2,9 @@
 
 Problems hit while building MAGI, and what fixed them.
 
+### Clients get HTTP 401 "Invalid API key"
+The server requires the key from `~/.config/magi/api-key`. Check the client's setting ([clients.md](clients.md#api-key)) and restart the client (Hermes: `launchctl kickstart -k gui/$(id -u)/ai.hermes.gateway`). HTTP 403 instead means the request came from a non-Tailscale network address.
+
 ### Server holds 80+ GiB while idle
 After long requests with the MTP drafter, `mlx-vlm 0.7.8` kept the finished speculative batch alive until the next request arrived. Fixed by the [local patch](setup.md#local-mlx-vlm-patch). If it comes back after an `mlx-vlm` upgrade, re-apply the patch. Don't shrink the prompt cache to "fix" memory before ruling out a leak — `mlx-ctl status` shows how much is cache.
 

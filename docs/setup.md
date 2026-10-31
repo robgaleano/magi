@@ -21,7 +21,8 @@ cd ~/llm/magi
 2. Applies [`server/patches/mlx-vlm-0.7.8-local.patch`](../server/patches/mlx-vlm-0.7.8-local.patch) (see [below](#local-mlx-vlm-patch)). Skipped if already applied.
 3. Copies `start-server.sh`, `mlx-ctl` and `benchmark.sh` into `$MLX_HOME` and links `mlx-ctl` into Homebrew's `bin`.
 4. Downloads both models from Hugging Face into `$MLX_HOME/models/`.
-5. Installs and starts the launchd service `com.local.mlx-server`.
+5. Creates the server API key in `~/.config/magi/api-key` if it doesn't exist ([security.md](security.md)).
+6. Installs and starts the launchd service `com.local.mlx-server`.
 
 Options: `--link` symlinks the scripts to the repo instead of copying them, so edits are tracked by git; `--skip-models`; `--skip-venv`.
 
@@ -30,7 +31,10 @@ Then, once:
 ```bash
 mlx-ctl setup-memory-limit   # passwordless rule so the GPU can use all but 16 GiB (see memory.md)
 ./menubar/install.sh         # optional menu bar app
+sudo ./server/hardening/lan-lockdown.sh install   # recommended: Tailscale/localhost-only access (security.md)
 ```
+
+Then give each client the API key — [clients.md](clients.md#api-key).
 
 ## Daily use: `mlx-ctl`
 

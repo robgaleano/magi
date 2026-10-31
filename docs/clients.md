@@ -4,6 +4,19 @@ Every client talks to the same server: `http://127.0.0.1:8080/v1` (OpenAI) or `h
 
 The model ID can be `robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit`; the server maps it (and `claude-*`, `sonnet`, `opus`, `haiku`) to the loaded model.
 
+## API key
+
+Every client must send the server's key (`cat ~/.config/magi/api-key`) — see [security.md](security.md#api-key-enabled-by-default). Where each one takes it:
+
+| Client | Setting |
+| :--- | :--- |
+| Akari (Hermes Agent) | `OPENAI_API_KEY=<key>` in `~/.hermes/.env` (used by the custom provider), then restart the gateway |
+| Claude Code (CLI and VS Code extension) | `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` in `~/.claude/settings.json` and in VS Code's `claudeCode.environmentVariables` |
+| DeepSeek Harness | `LOCAL_MLX_API_KEY` in `~/.dsh/.credentials.yaml` |
+| Roo Code | the API key field of the OpenAI-compatible provider |
+| `mlx-ctl`, menu bar app | read `~/.config/magi/api-key` automatically |
+| `curl` | `-H @<(printf 'Authorization: Bearer %s\n' "$(cat ~/.config/magi/api-key)")` |
+
 ## Reasoning level
 
 | Client sends | Server uses |
@@ -59,4 +72,4 @@ To go back to Anthropic's cloud: remove `~/.claude/settings.json`.
 
 ## Roo Code (VS Code)
 
-Use an OpenAI-compatible provider with base URL `http://127.0.0.1:8080/v1`, any API key, the model ID above, context window `131072` and max output `16384`.
+Use an OpenAI-compatible provider with base URL `http://127.0.0.1:8080/v1`, the server's API key, the model ID above, context window `131072` and max output `16384`.

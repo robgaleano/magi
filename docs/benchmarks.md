@@ -64,7 +64,8 @@ CLI comparison (no drafter vs drafter vs drafter + TurboQuant):
 Against the running server — send a request and read the speed from the log:
 
 ```bash
-curl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{
+KEY=$(cat ~/.config/magi/api-key)
+curl -s http://127.0.0.1:8080/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{
   "model": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
   "reasoning_effort": "off", "temperature": 0, "max_tokens": 512,
   "messages": [{"role": "user", "content": "Write a well-typed Python async HTTP client with retries and tests."}]
@@ -72,6 +73,6 @@ curl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/
 grep "Decode completed" ~/llm/mlx-qwen38/server.log | tail -1
 ```
 
-Live speed of a request in progress: `curl -s http://127.0.0.1:8080/v1/metrics | jq .live`.
+Live speed of a request in progress: `curl -s -H "Authorization: Bearer $KEY" http://127.0.0.1:8080/v1/metrics | jq .live`.
 
 Long-context test: build a ~140K-token prompt by repeating a sentence (`"Pack my box with five dozen liquor jugs now. " * 12750`), send it once, then again with a different question, and compare `Prefill completed` lines in `server.log`. Run `mlx-ctl clear-disk-cache` first for a cold start.

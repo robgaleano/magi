@@ -23,4 +23,4 @@ SOFTWARE.
 ---
 
 Not covered by this licence:
-- server/patches/*.patch — modifications to mlx-vlm (MIT, © Prince Canuma).
+- server/patches/*.patch — modifications to mlx-vlm (MIT, © Prince Canuma; see server/patches/LICENSE-mlx-vlm).

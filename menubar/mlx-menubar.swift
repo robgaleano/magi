@@ -11,6 +11,13 @@ let mlxHome = env["MLX_HOME"] ?? home + "/llm/mlx-qwen38"
 let serverPlist = home + "/Library/LaunchAgents/com.local.mlx-server.plist"
 let serverLog = mlxHome + "/server.log"
 let setupGuide = env["MLX_SETUP_GUIDE"] ?? mlxHome + "/README.md"
+// Server API key (docs/security.md). Read on every request so a rotated key is picked up without a restart.
+let apiKeyFile = env["MAGI_API_KEY_FILE"] ?? home + "/.config/magi/api-key"
+func authorize(_ req: inout URLRequest) {
+    guard let key = try? String(contentsOfFile: apiKeyFile, encoding: .utf8)
+        .trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else { return }
+    req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+}
 let sudoersRule = "/etc/sudoers.d/mlx-iogpu"
 let gib = 1_073_741_824.0
 
@@ -305,6 +312,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func poll() {
         guard let url = URL(string: serverBase + "/v1/metrics") else { return }
         var req = URLRequest(url: url)
+        authorize(&req)
         req.timeoutInterval = 1.2
         URLSession.shared.dataTask(with: req) { [weak self] data, _, err in
             let root = (err == nil ? data : nil).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -477,6 +485,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let url = URL(string: serverBase + path) else { return }
         if let label = busyLabel { beginBusy(label) }
         var req = URLRequest(url: url)
+        authorize(&req)
         req.httpMethod = "POST"
         req.timeoutInterval = timeout
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -516,7 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var launchTarget: String { "gui/\(getuid())/\(launchLabel)" }
 
     func waitForHealth(_ seconds: Int) -> String {
-        "for i in $(seq 1 \(seconds)); do curl -sf \(serverBase)/health >/dev/null 2>&1 && break; sleep 1; done"
+        "for i in $(seq 1 \(seconds)); do curl -sf -H @<(printf 'Authorization: Bearer %s\\n' \"$(tr -d '[:space:]' < '\(apiKeyFile)' 2>/dev/null)\") \(serverBase)/health >/dev/null 2>&1 && break; sleep 1; done"
     }
 
     @objc func restartServer() {

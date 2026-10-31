@@ -6,25 +6,34 @@ ACTION="${1:-status}"
 # GPU wired-memory limit while the model is loaded: total unified memory minus 16 GiB for macOS
 LIMIT_MB="${MLX_IOGPU_WIRED_LIMIT_MB:-$(( $(/usr/sbin/sysctl -n hw.memsize) / 1048576 - 16384 ))}"
 LIMIT_GIB=$(( LIMIT_MB / 1024 ))
+# Server API key (see docs/security.md). Sent via a header file so it never appears in `ps`.
+KEY_FILE="${MAGI_API_KEY_FILE:-$HOME/.config/magi/api-key}"
+api() {
+  if [ -r "$KEY_FILE" ]; then
+    curl -H @<(printf 'Authorization: Bearer %s\n' "$(tr -d '[:space:]' < "$KEY_FILE")") "$@"
+  else
+    curl "$@"
+  fi
+}
 
 case "$ACTION" in
   clear-cache)
     echo "🧹 Clearing in-RAM APC prefix cache (keeping 27B model mounted)..."
-    curl -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset" && echo ""
+    api -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset" && echo ""
     ;;
   clear-disk-cache)
     echo "🗑️ Clearing both in-RAM and SSD APC caches..."
-    curl -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset?include_disk=true" && echo ""
+    api -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset?include_disk=true" && echo ""
     ;;
   unload|unmount)
     echo "💤 Unmounting model & caches from Unified Memory..."
-    curl -s -X POST "http://127.0.0.1:${PORT}/unload" && echo ""
+    api -s -X POST "http://127.0.0.1:${PORT}/unload" && echo ""
     sudo -n /usr/sbin/sysctl -w iogpu.wired_limit_mb=0 >/dev/null 2>&1 || true
     ;;
   load|mount)
     echo "🚀 Mounting model & MTP drafter into Unified Memory (112 GiB GPU / 16 GiB macOS split)..."
     sudo -n /usr/sbin/sysctl -w iogpu.wired_limit_mb=${LIMIT_MB} >/dev/null 2>&1 || true
-    curl -s -X POST "http://127.0.0.1:${PORT}/load" -H "Content-Type: application/json" -d '{}' && echo ""
+    api -s -X POST "http://127.0.0.1:${PORT}/load" -H "Content-Type: application/json" -d '{}' && echo ""
     ;;
   setup-memory-limit)
     echo "🔐 Installing passwordless sudoers rule (/etc/sudoers.d/mlx-iogpu) for automatic 16 GiB macOS / 112 GiB GPU memory split..."
@@ -38,7 +47,7 @@ case "$ACTION" in
   effort)
     EFFORT_VAL="${2:-medium}"
     echo "🧠 Setting default thinking effort to '${EFFORT_VAL}'..."
-    curl -s -X POST "http://127.0.0.1:${PORT}/v1/reasoning-effort" -H "Content-Type: application/json" -d "{\"effort\": \"${EFFORT_VAL}\"}" && echo ""
+    api -s -X POST "http://127.0.0.1:${PORT}/v1/reasoning-effort" -H "Content-Type: application/json" -d "{\"effort\": \"${EFFORT_VAL}\"}" && echo ""
     ;;
 esac
 
@@ -53,7 +62,7 @@ fi
 RAM_GIB=$(ps -o rss= -p "$PID" | awk '{printf "%.2f GiB", $1/1024/1024}')
 SYS_FREE=$(memory_pressure 2>/dev/null | awk -F': ' '/System-wide memory free percentage/ {print $2}' || echo "N/A")
 echo "✅ SERVER LISTENING (PID: $PID | Process RSS: $RAM_GIB | macOS Free Memory: $SYS_FREE)"
-curl -s "http://127.0.0.1:${PORT}/v1/metrics" | python3 -c '
+api -s "http://127.0.0.1:${PORT}/v1/metrics" | python3 -c '
 import sys, json
 m = json.load(sys.stdin)
 lat = m.get("latest") or {}

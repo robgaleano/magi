@@ -1,5 +1,8 @@
 # Excerpts from ~/.hermes/config.yaml for Akari (Hermes Agent v0.22) using the MAGI server.
 # Merge into your own config; everything not shown here is Hermes' default.
+# The server's API key goes in ~/.hermes/.env, not here:
+#   OPENAI_API_KEY=<contents of ~/.config/magi/api-key>
+#   OPENAI_BASE_URL=http://127.0.0.1:8080/v1
 
 model:
   default: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit"

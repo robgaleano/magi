@@ -22,6 +22,12 @@ export APC_CHECKPOINT_INTERVAL_TOKENS="${APC_CHECKPOINT_INTERVAL_TOKENS:-4096}"
 export MLX_VLM_DEFAULT_MODEL="${MODEL}"
 export MLX_VLM_DRAFT_MODEL="${DRAFTER}"
 export MLX_VLM_MODEL_PATHS="${MODEL}"
+# API key: every request (including /health and /v1/metrics) must send "Authorization: Bearer <key>".
+KEY_FILE="${MAGI_API_KEY_FILE:-$HOME/.config/magi/api-key}"
+if [[ -z "${MLX_VLM_SERVER_API_KEY:-}" && -r "$KEY_FILE" ]]; then
+  MLX_VLM_SERVER_API_KEY="$(tr -d '[:space:]' < "$KEY_FILE")"
+  export MLX_VLM_SERVER_API_KEY
+fi
 export MLX_VLM_DEFAULT_REASONING_EFFORT="${MLX_VLM_DEFAULT_REASONING_EFFORT:-xhigh}"
 # GPU wired-memory limit while the model is loaded: total unified memory minus 16 GiB for macOS
 export MLX_IOGPU_WIRED_LIMIT_MB="${MLX_IOGPU_WIRED_LIMIT_MB:-$(( $(/usr/sbin/sysctl -n hw.memsize) / 1048576 - 16384 ))}"
@@ -73,6 +79,7 @@ echo " Starting MLX Server on http://${HOST}:${PORT}/v1 (preload=${PRELOAD})"
 echo " Model            : ${MODEL}"
 echo " Drafter          : ${DRAFTER:-none} (block_size=${DRAFT_BLOCK_SIZE})"
 echo " KV Mode          : ${KV_MODE}"
+echo " API key          : $([[ -n "${MLX_VLM_SERVER_API_KEY:-}" ]] && echo "required" || echo "NOT SET (any local web page can call the server)")"
 echo " Prefix Caching   : APC_ENABLED=${APC_ENABLED} (blocks=${APC_NUM_BLOCKS}, checkpoints=${APC_CHECKPOINT_ENTRIES})"
 echo "============================================================"
 

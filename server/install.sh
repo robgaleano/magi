@@ -75,13 +75,24 @@ if [[ $SKIP_MODELS == 0 ]]; then
     --local-dir "$MLX_HOME/models/Swift-1.5-Qwen3.8-27B-MTP-8bit"
 fi
 
+step "API key (~/.config/magi/api-key)"
+KEY_FILE="${MAGI_API_KEY_FILE:-$HOME/.config/magi/api-key}"
+if [[ -s "$KEY_FILE" ]]; then
+  echo "already exists"
+else
+  mkdir -p "$(dirname "$KEY_FILE")" && chmod 700 "$(dirname "$KEY_FILE")"
+  (umask 077; openssl rand -hex 32 > "$KEY_FILE")
+  echo "created — give this key to your clients (docs/clients.md)"
+fi
+health() { curl -sf -H @<(printf 'Authorization: Bearer %s\n' "$(tr -d '[:space:]' < "$KEY_FILE")") http://127.0.0.1:8080/health >/dev/null; }
+
 step "LaunchAgent (com.local.mlx-server)"
 PLIST="$HOME/Library/LaunchAgents/com.local.mlx-server.plist"
 mkdir -p "$(dirname "$PLIST")"
 sed "s|__MLX_HOME__|$MLX_HOME|g" "$REPO/server/com.local.mlx-server.plist.template" > "$PLIST"
 reload_agent com.local.mlx-server "$PLIST"
-for _ in $(seq 1 45); do curl -sf http://127.0.0.1:8080/health >/dev/null && break; sleep 1; done
-curl -sf http://127.0.0.1:8080/health >/dev/null && echo "server is up on :8080" || echo "server not responding yet — check $MLX_HOME/server.log"
+for _ in $(seq 1 45); do health && break; sleep 1; done
+health && echo "server is up on :8080" || echo "server not responding yet — check $MLX_HOME/server.log"
 
 if [[ ! -f /etc/sudoers.d/mlx-iogpu ]]; then
   printf '\nOptional: run `mlx-ctl setup-memory-limit` once to let the GPU use all but 16 GiB of memory\n'
