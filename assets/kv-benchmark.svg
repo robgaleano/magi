@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="290" viewBox="0 0 960 290" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-  <rect width="960" height="290" rx="18" fill="#111318"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="312" viewBox="0 0 960 312" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect width="960" height="312" rx="18" fill="#111318"/>
   <text x="32" y="42" font-size="18" font-weight="700" fill="#F2F3F5">KV cache precision at 140K tokens</text>
-  <text x="352" y="42" font-size="14" fill="#9AA1AE">M5 Max 40-core GPU · 128 GB · mlx-vlm 0.7.8 + MTP drafter</text>
+  <text x="32" y="64" font-size="13.5" fill="#9AA1AE">Test machine: M5 Max 40-core GPU · 128 GB · mlx-vlm 0.7.8 + MTP drafter</text>
+  <g transform="translate(0,22)">
 
   <!-- Panel 1: prefill (higher is better) -->
   <g transform="translate(32,70)">
@@ -58,5 +59,6 @@
   <g font-size="12.5" fill="#9AA1AE">
     <text x="32" y="246">Short prompts decode at ~49 tok/s in all three modes. TQ4 = symmetric 4-bit TurboQuant; the mixed 8-bit K + TurboQuant V mode</text>
     <text x="32" y="266">fails in the server (“mixed key/value KV quantization schemes are not supported on the batch path”). MAGI keeps KV_MODE=f16.</text>
+  </g>
   </g>
 </svg>

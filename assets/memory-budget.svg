@@ -1,13 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
   <defs>
     <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="8" height="8" fill="#232733"/>
       <line x1="0" y1="0" x2="0" y2="8" stroke="#3A3F4B" stroke-width="3"/>
     </pattern>
   </defs>
-  <rect width="960" height="300" rx="18" fill="#111318"/>
+  <rect width="960" height="320" rx="18" fill="#111318"/>
   <text x="40" y="44" font-size="18" font-weight="700" fill="#F2F3F5">Memory budget</text>
-  <text x="190" y="44" font-size="14" fill="#9AA1AE">test machine: M5 Max, 128 GB unified memory, model loaded (GiB)</text>
+  <text x="40" y="66" font-size="13.5" fill="#9AA1AE">Test machine: M5 Max, 128 GB unified memory, model loaded (GiB)</text>
+  <g transform="translate(0,20)">
 
   <!-- scale: x = 40 + GiB * 6.875 -->
   <rect x="40" y="96" width="191.8" height="54" fill="#E5231B"/>
@@ -42,9 +43,10 @@
     <text x="920" y="172">128</text>
   </g>
 
-  <g font-size="13" fill="#9AA1AE">
-    <text x="40" y="236">• GPU limit = total memory − 16 GiB, set on load and reset on unload; the menu bar app re-applies it if it drifts (e.g. after a reboot).</text>
+  <g font-size="12.5" fill="#9AA1AE">
+    <text x="40" y="236">• GPU limit = total memory − 16 GiB, set on load and reset on unload; the menu bar app re-applies it after a reboot.</text>
     <text x="40" y="258">• One 86K–140K-token conversation fills ~17–29 GiB of prompt cache. mlx-ctl clear-cache frees it without unloading the model.</text>
     <text x="40" y="280">• Measured 2026-10-30 with the idle-memory fix applied. Before the fix the server held 80+ GiB while idle.</text>
+  </g>
   </g>
 </svg>
