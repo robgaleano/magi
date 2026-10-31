@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.local.mlx-server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__MLX_HOME__/start-server.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOST</key>
+        <string>0.0.0.0</string>
+        <key>PORT</key>
+        <string>8080</string>
+        <!-- 0 = start without loading the model; it loads on the first request or `mlx-ctl mount` -->
+        <key>PRELOAD</key>
+        <string>0</string>
+        <key>MLX_VLM_DEFAULT_REASONING_EFFORT</key>
+        <string>xhigh</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>__MLX_HOME__</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>__MLX_HOME__/server.log</string>
+    <key>StandardErrorPath</key>
+    <string>__MLX_HOME__/server.log</string>
+</dict>
+</plist>

@@ -1,0 +1,40 @@
+# DeepSeek Harness (dsh) configuration patch for local MLX Qwen3.8-27B on M5 Max
+# Copy or merge into:
+#   - ~/.dsh/cordis.patch.yml                   (applies to all profiles: Desktop, Web, Headless)
+#   - ~/.dsh/profiles/desktop/cordis.patch.yml  (Desktop app only)
+#   - ~/.dsh/profiles/web/cordis.patch.yml      (dsh web only)
+# Or pass directly at launch:
+#   npx @deepseek-ai/dsh web --patch ~/llm/mlx-qwen38/dsh-mlx-qwen38.patch.yml
+
+- id: llm-pi-ai
+  config:
+    providers:
+      local-mlx:
+        displayName: Local MLX (M5 Max 128GB)
+        apiKeyEnv: LOCAL_MLX_API_KEY
+        api: openai-completions
+        baseURL: http://127.0.0.1:8080/v1
+        reasoning: high
+        streamIdleTimeoutMs: 600000
+        compat:
+          supportsDeveloperRole: false
+          maxTokensField: max_tokens
+          supportsReasoningEffort: true
+        models:
+          - id: robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit
+            name: Swift 1.5 Qwen 3.8 27B (8-bit MLX + MTP)
+            contextWindow: 131072
+            maxTokens: 32768
+            input:
+              - text
+              - image
+            reasoningEfforts:
+              off: off
+              low: low
+              medium: medium
+              high: xhigh
+
+- id: agent-default-model
+  config:
+    provider: local-mlx
+    model: robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit

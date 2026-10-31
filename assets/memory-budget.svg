@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#232733"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#3A3F4B" stroke-width="3"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="300" rx="18" fill="#111318"/>
+  <text x="40" y="44" font-size="18" font-weight="700" fill="#F2F3F5">Memory budget</text>
+  <text x="190" y="44" font-size="14" fill="#9AA1AE">test machine: M5 Max, 128 GB unified memory, model loaded (GiB)</text>
+
+  <!-- scale: x = 40 + GiB * 6.875 -->
+  <rect x="40" y="96" width="191.8" height="54" fill="#E5231B"/>
+  <rect x="231.8" y="96" width="220" height="54" fill="#FF7A1A"/>
+  <rect x="451.8" y="96" width="358.2" height="54" fill="#1E2A22" stroke="#2F4A38"/>
+  <rect x="810" y="96" width="110" height="54" fill="url(#hatch)"/>
+  <rect x="40" y="96" width="880" height="54" rx="2" fill="none" stroke="#3A3F4B"/>
+
+  <g font-size="13" font-weight="600">
+    <text x="135.9" y="128" text-anchor="middle" fill="#FFFFFF">Model weights</text>
+    <text x="341.8" y="128" text-anchor="middle" fill="#1A0E05">Prompt cache (≤ 32)</text>
+    <text x="631" y="122" text-anchor="middle" fill="#9CD3AE">Free for requests</text>
+    <text x="631" y="139" text-anchor="middle" font-weight="400" font-size="12" fill="#7FA88D">KV cache, activations, headroom</text>
+    <text x="865" y="128" text-anchor="middle" fill="#C9CDD4">macOS</text>
+  </g>
+
+  <!-- markers -->
+  <g font-size="12" fill="#C9CDD4">
+    <line x1="428.4" y1="86" x2="428.4" y2="160" stroke="#F2F3F5" stroke-dasharray="3 3"/>
+    <text x="428.4" y="80" text-anchor="middle">56.5 idle after long sessions</text>
+    <line x1="546.7" y1="160" x2="546.7" y2="182" stroke="#F2F3F5" stroke-dasharray="3 3"/>
+    <text x="546.7" y="198" text-anchor="middle">73.7 peak (140K-token request)</text>
+    <line x1="810" y1="86" x2="810" y2="182" stroke="#FF7A1A" stroke-width="2"/>
+    <text x="810" y="80" text-anchor="middle" fill="#FF7A1A" font-weight="700">112 GPU limit</text>
+  </g>
+
+  <!-- axis -->
+  <g font-size="11.5" fill="#7C8494" text-anchor="middle">
+    <text x="40" y="172">0</text>
+    <text x="231.8" y="172">27.9</text>
+    <text x="451.8" y="172">59.9</text>
+    <text x="920" y="172">128</text>
+  </g>
+
+  <g font-size="13" fill="#9AA1AE">
+    <text x="40" y="236">• GPU limit = total memory − 16 GiB, set on load and reset on unload; the menu bar app re-applies it if it drifts (e.g. after a reboot).</text>
+    <text x="40" y="258">• One 86K–140K-token conversation fills ~17–29 GiB of prompt cache. mlx-ctl clear-cache frees it without unloading the model.</text>
+    <text x="40" y="280">• Measured 2026-10-30 with the idle-memory fix applied. Before the fix the server held 80+ GiB while idle.</text>
+  </g>
+</svg>

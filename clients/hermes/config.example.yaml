@@ -1,0 +1,50 @@
+# Excerpts from ~/.hermes/config.yaml for Akari (Hermes Agent v0.22) using the MAGI server.
+# Merge into your own config; everything not shown here is Hermes' default.
+
+model:
+  default: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit"
+  provider: "custom"
+  base_url: "http://127.0.0.1:8080/v1"
+  streaming: true
+  context_length: 131072
+
+providers:
+  local:
+    base_url: "http://127.0.0.1:8080/v1"
+    request_timeout_seconds: 600
+    capabilities:
+      tool_use: true
+      reasoning: true
+      vision: true
+
+# Background tasks also run on the local model, at low reasoning effort.
+auxiliary:
+  web_extract:       { provider: "custom", model: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit", reasoning_effort: "low" }
+  title_generation:  { enabled: true, provider: "custom", model: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit", reasoning_effort: "low", timeout: 60 }
+  session_search:    { provider: "custom", model: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit", reasoning_effort: "low", timeout: 60, max_concurrency: 2 }
+  compression:       { provider: "custom", model: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit", reasoning_effort: "low" }
+  background_review: { enabled: true, provider: "custom", model: "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit", reasoning_effort: "low" }
+
+plugins:
+  enabled:
+    - hermes-token-speed   # tok/s chip in the desktop app
+    - llmslim              # LLM-free context compaction (75% -> 50%), keeps the prompt prefix intact
+    - moshi-hooks          # agent events / approvals in the Moshi iOS app
+    - obsidian-memory      # Obsidian vault access
+    - rtk-rewrite          # routes terminal commands through rtk to shrink tool output
+
+context:
+  engine: llmslim
+
+tools:
+  tool_search:
+    enabled: "auto"
+    defer:                 # schemas only loaded on demand
+      - computer_use
+      - image_generate
+      - cronjob_manage
+      - browser_navigate
+      - browser_snapshot
+      - browser_click
+      - text_to_speech
+      # ... (see your config for the full list)

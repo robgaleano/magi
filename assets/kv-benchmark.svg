@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="290" viewBox="0 0 960 290" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect width="960" height="290" rx="18" fill="#111318"/>
+  <text x="32" y="42" font-size="18" font-weight="700" fill="#F2F3F5">KV cache precision at 140K tokens</text>
+  <text x="352" y="42" font-size="14" fill="#9AA1AE">M5 Max 40-core GPU · 128 GB · mlx-vlm 0.7.8 + MTP drafter</text>
+
+  <!-- Panel 1: prefill (higher is better) -->
+  <g transform="translate(32,70)">
+    <text x="0" y="0" font-size="13" font-weight="700" fill="#FF7A1A" letter-spacing="1">PREFILL tok/s</text>
+    <text x="0" y="18" font-size="11.5" fill="#7C8494">higher is better</text>
+    <g font-size="12.5">
+      <text x="0" y="54" fill="#E6E8EC">f16</text>
+      <rect x="48" y="40" width="190" height="18" rx="4" fill="#FF7A1A"/>
+      <text x="244" y="54" fill="#F2F3F5" font-weight="700">538</text>
+      <text x="0" y="88" fill="#E6E8EC">q8</text>
+      <rect x="48" y="74" width="135.6" height="18" rx="4" fill="#4A505E"/>
+      <text x="189.6" y="88" fill="#C9CDD4">384</text>
+      <text x="0" y="122" fill="#E6E8EC">TQ4</text>
+      <rect x="48" y="108" width="140.6" height="18" rx="4" fill="#4A505E"/>
+      <text x="194.6" y="122" fill="#C9CDD4">398</text>
+    </g>
+  </g>
+
+  <!-- Panel 2: decode (higher is better) -->
+  <g transform="translate(340,70)">
+    <text x="0" y="0" font-size="13" font-weight="700" fill="#FF7A1A" letter-spacing="1">DECODE tok/s</text>
+    <text x="0" y="18" font-size="11.5" fill="#7C8494">higher is better</text>
+    <g font-size="12.5">
+      <text x="0" y="54" fill="#E6E8EC">f16</text>
+      <rect x="48" y="40" width="190" height="18" rx="4" fill="#FF7A1A"/>
+      <text x="244" y="54" fill="#F2F3F5" font-weight="700">15.0</text>
+      <text x="0" y="88" fill="#E6E8EC">q8</text>
+      <rect x="48" y="74" width="130.5" height="18" rx="4" fill="#4A505E"/>
+      <text x="184.5" y="88" fill="#C9CDD4">10.3</text>
+      <text x="0" y="122" fill="#E6E8EC">TQ4</text>
+      <rect x="48" y="108" width="133" height="18" rx="4" fill="#4A505E"/>
+      <text x="187" y="122" fill="#C9CDD4">10.5</text>
+    </g>
+  </g>
+
+  <!-- Panel 3: peak memory (lower is better) -->
+  <g transform="translate(648,70)">
+    <text x="0" y="0" font-size="13" font-weight="700" fill="#FF7A1A" letter-spacing="1">PEAK GPU MEMORY GiB</text>
+    <text x="0" y="18" font-size="11.5" fill="#7C8494">lower is better</text>
+    <g font-size="12.5">
+      <text x="0" y="54" fill="#E6E8EC">f16</text>
+      <rect x="48" y="40" width="148.6" height="18" rx="4" fill="#FF7A1A"/>
+      <text x="202.6" y="54" fill="#F2F3F5" font-weight="700">73.7</text>
+      <text x="0" y="88" fill="#E6E8EC">q8</text>
+      <rect x="48" y="74" width="186" height="18" rx="4" fill="#4A505E"/>
+      <text x="240" y="88" fill="#C9CDD4">92.3</text>
+      <text x="0" y="122" fill="#E6E8EC">TQ4</text>
+      <rect x="48" y="108" width="190" height="18" rx="4" fill="#4A505E"/>
+      <text x="244" y="122" fill="#C9CDD4">94.3</text>
+    </g>
+  </g>
+
+  <line x1="32" y1="222" x2="928" y2="222" stroke="#2A2E38"/>
+  <g font-size="12.5" fill="#9AA1AE">
+    <text x="32" y="246">Short prompts decode at ~49 tok/s in all three modes. TQ4 = symmetric 4-bit TurboQuant; the mixed 8-bit K + TurboQuant V mode</text>
+    <text x="32" y="266">fails in the server (“mixed key/value KV quantization schemes are not supported on the batch path”). MAGI keeps KV_MODE=f16.</text>
+  </g>
+</svg>

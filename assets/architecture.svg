@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FF7A1A"/>
+    </marker>
+    <marker id="arrow-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7C8494"/>
+    </marker>
+    <pattern id="hex" width="28" height="24" patternUnits="userSpaceOnUse">
+      <path d="M7,0 L21,0 L28,12 L21,24 L7,24 L0,12 z" fill="none" stroke="#FF7A1A" stroke-opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <rect width="960" height="600" rx="18" fill="#111318"/>
+  <rect width="960" height="600" rx="18" fill="url(#hex)"/>
+
+  <text x="32" y="44" font-size="22" font-weight="700" fill="#F2F3F5">MAGI</text>
+  <text x="102" y="44" font-size="15" fill="#9AA1AE">local AI on Apple Silicon with MLX</text>
+
+  <!-- Clients -->
+  <text x="32" y="92" font-size="12" font-weight="700" fill="#FF7A1A" letter-spacing="1.5">CLIENTS</text>
+  <g font-size="14">
+    <rect x="32" y="104" width="250" height="62" rx="10" fill="#1B1E25" stroke="#FF7A1A" stroke-width="1.5"/>
+    <text x="48" y="130" font-weight="700" fill="#F2F3F5">Akari · Hermes Agent</text>
+    <text x="48" y="151" font-size="12.5" fill="#9AA1AE">Telegram · CLI · desktop · cron jobs</text>
+
+    <rect x="32" y="178" width="250" height="44" rx="10" fill="#1B1E25" stroke="#3A3F4B"/>
+    <text x="48" y="205" font-weight="600" fill="#E6E8EC">Claude Code</text>
+
+    <rect x="32" y="234" width="250" height="44" rx="10" fill="#1B1E25" stroke="#3A3F4B"/>
+    <text x="48" y="261" font-weight="600" fill="#E6E8EC">DeepSeek Harness</text>
+
+    <rect x="32" y="290" width="250" height="44" rx="10" fill="#1B1E25" stroke="#3A3F4B"/>
+    <text x="48" y="317" font-weight="600" fill="#E6E8EC">Roo Code · VS Code</text>
+  </g>
+
+  <!-- Remote devices -->
+  <rect x="32" y="372" width="250" height="62" rx="10" fill="#161920" stroke="#3A3F4B" stroke-dasharray="5 4"/>
+  <text x="48" y="398" font-size="14" font-weight="600" fill="#E6E8EC">Phone · tablet · laptop</text>
+  <text x="48" y="419" font-size="12.5" fill="#9AA1AE">remote over Tailscale + Moshi</text>
+  <path d="M32,403 L18,403 L18,135 L28,135" stroke="#7C8494" stroke-width="1.5" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow-dim)"/>
+
+  <!-- Arrows clients -> server -->
+  <g stroke="#FF7A1A" stroke-width="1.8" fill="none" marker-end="url(#arrow)">
+    <path d="M282,135 C320,135 320,200 352,200"/>
+    <path d="M282,200 L352,212"/>
+    <path d="M282,256 L352,232"/>
+    <path d="M282,312 C320,312 320,250 352,248"/>
+  </g>
+
+  <!-- MAGI server -->
+  <text x="356" y="92" font-size="12" font-weight="700" fill="#FF7A1A" letter-spacing="1.5">MAGI SERVER</text>
+  <rect x="356" y="104" width="262" height="330" rx="12" fill="#1B1E25" stroke="#FF7A1A" stroke-width="2"/>
+  <text x="374" y="132" font-size="16" font-weight="700" fill="#F2F3F5">mlx-vlm 0.7.8</text>
+  <text x="374" y="152" font-size="12.5" fill="#9AA1AE">:8080 · OpenAI + Anthropic API</text>
+  <g font-size="12.5">
+    <rect x="372" y="168" width="230" height="52" rx="8" fill="#232733"/>
+    <text x="386" y="190" font-weight="600" fill="#E6E8EC">Prompt cache (APC)</text>
+    <text x="386" y="208" fill="#9AA1AE">32 GiB RAM + 40 GB SSD</text>
+
+    <rect x="372" y="228" width="230" height="52" rx="8" fill="#232733"/>
+    <text x="386" y="250" font-weight="600" fill="#E6E8EC">KV cache</text>
+    <text x="386" y="268" fill="#9AA1AE">f16 · 131K-token context</text>
+
+    <rect x="372" y="288" width="230" height="52" rx="8" fill="#232733"/>
+    <text x="386" y="310" font-weight="600" fill="#E6E8EC">Live metrics</text>
+    <text x="386" y="328" fill="#9AA1AE">/v1/metrics · real-time tok/s</text>
+
+    <rect x="372" y="348" width="230" height="70" rx="8" fill="#232733"/>
+    <text x="386" y="370" font-weight="600" fill="#E6E8EC">Access</text>
+    <text x="386" y="388" fill="#9AA1AE">localhost + Tailscale only</text>
+    <text x="386" y="406" fill="#9AA1AE">other LAN clients → HTTP 403</text>
+  </g>
+
+  <!-- Menu bar -->
+  <rect x="674" y="104" width="254" height="62" rx="10" fill="#1B1E25" stroke="#3A3F4B"/>
+  <text x="690" y="130" font-size="14" font-weight="700" fill="#F2F3F5">mlx-menubar</text>
+  <text x="690" y="151" font-size="12.5" fill="#9AA1AE">live tok/s · load/unload · reasoning</text>
+  <path d="M674,135 L626,150" stroke="#7C8494" stroke-width="1.5" fill="none" marker-end="url(#arrow-dim)"/>
+
+  <!-- Model -->
+  <text x="674" y="204" font-size="12" font-weight="700" fill="#FF7A1A" letter-spacing="1.5">MODEL</text>
+  <rect x="674" y="216" width="254" height="84" rx="10" fill="#1B1E25" stroke="#E5231B" stroke-width="1.8"/>
+  <text x="690" y="242" font-size="14" font-weight="700" fill="#F2F3F5">Swift-1.5 Qwen3.8 27B</text>
+  <text x="690" y="262" font-size="12.5" fill="#9AA1AE">8-bit MLX · 27.5 GiB</text>
+  <text x="690" y="282" font-size="12.5" fill="#9AA1AE">48 linear + 16 full-attention layers</text>
+
+  <rect x="674" y="312" width="254" height="66" rx="10" fill="#1B1E25" stroke="#E5231B" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <text x="690" y="338" font-size="14" font-weight="700" fill="#F2F3F5">MTP drafter · 8-bit</text>
+  <text x="690" y="358" font-size="12.5" fill="#9AA1AE">0.44 GiB · ~2.5× faster decoding</text>
+
+  <path d="M618,258 L668,258" stroke="#FF7A1A" stroke-width="1.8" fill="none" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <path d="M618,344 L668,344" stroke="#FF7A1A" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Memory bar -->
+  <text x="32" y="476" font-size="12" font-weight="700" fill="#FF7A1A" letter-spacing="1.5">UNIFIED MEMORY · 128 GB TEST MACHINE</text>
+  <rect x="32" y="490" width="756" height="44" rx="8" fill="#2A1A10" stroke="#FF7A1A" stroke-width="1.5"/>
+  <text x="48" y="517" font-size="13.5" font-weight="600" fill="#FFB27A">GPU may use all but 16 GiB while the model is loaded (112 GiB here)</text>
+  <rect x="796" y="490" width="132" height="44" rx="8" fill="#232733" stroke="#3A3F4B"/>
+  <text x="862" y="517" font-size="13.5" font-weight="600" fill="#C9CDD4" text-anchor="middle">16 GiB macOS</text>
+  <text x="32" y="566" font-size="12.5" fill="#7C8494">Measured on M5 Max · 40-core GPU · 614 GB/s · 128 GB: ~49 tok/s short context · 15 tok/s at 140K tokens · 73.7 GiB peak</text>
+</svg>

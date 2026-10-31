@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.local.mlx-menubar</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__MLX_HOME__/mlx-menubar</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>MLX_HOME</key>
+        <string>__MLX_HOME__</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/mlx-menubar.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/mlx-menubar.err</string>
+</dict>
+</plist>

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${PORT:-8080}"
+ACTION="${1:-status}"
+# GPU wired-memory limit while the model is loaded: total unified memory minus 16 GiB for macOS
+LIMIT_MB="${MLX_IOGPU_WIRED_LIMIT_MB:-$(( $(/usr/sbin/sysctl -n hw.memsize) / 1048576 - 16384 ))}"
+LIMIT_GIB=$(( LIMIT_MB / 1024 ))
+
+case "$ACTION" in
+  clear-cache)
+    echo "🧹 Clearing in-RAM APC prefix cache (keeping 27B model mounted)..."
+    curl -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset" && echo ""
+    ;;
+  clear-disk-cache)
+    echo "🗑️ Clearing both in-RAM and SSD APC caches..."
+    curl -s -X POST "http://127.0.0.1:${PORT}/v1/cache/reset?include_disk=true" && echo ""
+    ;;
+  unload|unmount)
+    echo "💤 Unmounting model & caches from Unified Memory..."
+    curl -s -X POST "http://127.0.0.1:${PORT}/unload" && echo ""
+    sudo -n /usr/sbin/sysctl -w iogpu.wired_limit_mb=0 >/dev/null 2>&1 || true
+    ;;
+  load|mount)
+    echo "🚀 Mounting model & MTP drafter into Unified Memory (112 GiB GPU / 16 GiB macOS split)..."
+    sudo -n /usr/sbin/sysctl -w iogpu.wired_limit_mb=${LIMIT_MB} >/dev/null 2>&1 || true
+    curl -s -X POST "http://127.0.0.1:${PORT}/load" -H "Content-Type: application/json" -d '{}' && echo ""
+    ;;
+  setup-memory-limit)
+    echo "🔐 Installing passwordless sudoers rule (/etc/sudoers.d/mlx-iogpu) for automatic 16 GiB macOS / 112 GiB GPU memory split..."
+    RULE="$(id -un) ALL=(root) NOPASSWD: /usr/sbin/sysctl -w iogpu.wired_limit_mb=${LIMIT_MB}, /usr/sbin/sysctl -w iogpu.wired_limit_mb=0"
+    printf '%s\n' "$RULE" | sudo tee /etc/sudoers.d/mlx-iogpu >/dev/null && \
+      sudo chmod 0440 /etc/sudoers.d/mlx-iogpu && \
+      sudo visudo -cf /etc/sudoers.d/mlx-iogpu && \
+      sudo /usr/sbin/sysctl -w iogpu.wired_limit_mb=${LIMIT_MB}
+    echo "✅ Done! Auto-switching (${LIMIT_MB} MB on mount / 0 on unmount) is now permanently enabled."
+    ;;
+  effort)
+    EFFORT_VAL="${2:-medium}"
+    echo "🧠 Setting default thinking effort to '${EFFORT_VAL}'..."
+    curl -s -X POST "http://127.0.0.1:${PORT}/v1/reasoning-effort" -H "Content-Type: application/json" -d "{\"effort\": \"${EFFORT_VAL}\"}" && echo ""
+    ;;
+esac
+
+PID=$(lsof -ti :"$PORT" -sTCP:LISTEN 2>/dev/null | head -n 1 || true)
+
+if [ -z "$PID" ]; then
+  echo "❌ NOT RUNNING: No MLX server listening on port $PORT."
+  echo "   Run: ~/llm/mlx-qwen38/start-server.sh"
+  exit 1
+fi
+
+RAM_GIB=$(ps -o rss= -p "$PID" | awk '{printf "%.2f GiB", $1/1024/1024}')
+SYS_FREE=$(memory_pressure 2>/dev/null | awk -F': ' '/System-wide memory free percentage/ {print $2}' || echo "N/A")
+echo "✅ SERVER LISTENING (PID: $PID | Process RSS: $RAM_GIB | macOS Free Memory: $SYS_FREE)"
+curl -s "http://127.0.0.1:${PORT}/v1/metrics" | python3 -c '
+import sys, json
+m = json.load(sys.stdin)
+lat = m.get("latest") or {}
+srv = m.get("server") or {}
+loaded = srv.get("loaded_model")
+mlx_mem = srv.get("mlx_memory") or {}
+act_gb = mlx_mem.get("active_bytes", 0) / (1024**3)
+cache_gb = mlx_mem.get("cache_bytes", 0) / (1024**3)
+s = srv.get("apc") or {}
+res_gb = s.get("resident_bytes", 0) / (1024**3)
+max_gb = s.get("memory_max_bytes", 0) / (1024**3)
+mount_state = f"🟢 MOUNTED ({loaded})" if loaded else "💤 UNMOUNTED (0.00 GiB GPU weights)"
+draft_m = mlx_mem.get("draft_model")
+effort_m = mlx_mem.get("reasoning_effort", "medium")
+decode_s = lat.get("decode_tok_s", 0)
+burst_s = lat.get("sliding_decode_tok_s_last_32", 0)
+prefill_s = lat.get("prefill_tok_s", 0)
+ttft_s = lat.get("ttft_s", 0)
+matched_t = s.get("matched_tokens", 0)
+print(f"   Model State: {mount_state}")
+print(f"   MLX GPU RAM: Active={act_gb:.2f} GiB | Metal Pool Cache={cache_gb:.2f} GiB")
+print(f"   Drafter    : {draft_m} | Thinking Effort: {effort_m}")
+print(f"   Last Speed : Decode={decode_s:.1f} tok/s (burst {burst_s:.1f} tok/s) | Prefill={prefill_s:.0f} tok/s (TTFT {ttft_s:.2f}s)")
+print(f"   APC In-RAM : {res_gb:.2f} GiB / {max_gb:.0f} GiB ({matched_t} cached tokens matched)")
+'
+WIRED_MB=$(/usr/sbin/sysctl -n iogpu.wired_limit_mb 2>/dev/null || echo "0")
+if [ "$WIRED_MB" = "$LIMIT_MB" ]; then
+  echo "   RAM Split  : 🛡️ ${LIMIT_GIB} GiB GPU / 16 GiB macOS Reserved (iogpu.wired_limit_mb=${LIMIT_MB})"
+else
+  echo "   RAM Split  : Default macOS limit (iogpu.wired_limit_mb=${WIRED_MB}) — run 'mlx-ctl setup-memory-limit' once to enable auto 16 GiB macOS split"
+fi
+echo "   Commands   : mlx-ctl [status | mount | unmount | clear-cache | clear-disk-cache | effort <low|medium|xhigh|off> | setup-memory-limit]"

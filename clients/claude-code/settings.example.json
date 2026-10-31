@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8080",
+    "ANTHROPIC_AUTH_TOKEN": "sk-local",
+    "ANTHROPIC_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "ANTHROPIC_SMALL_FAST_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
+    "ENABLE_TOOL_SEARCH": "true"
+  },
+  "model": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+  "modelPicker": {
+    "options": [
+      {
+        "model": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
+        "label": "Swift 1.5 Qwen 3.8 27B (8-bit MLX + MTP)",
+        "description": "Local MAGI server on 127.0.0.1:8080",
+        "behavesAs": "claude-sonnet-4-6"
+      }
+    ],
+    "replaceBuiltInOptions": true
+  },
+  "modelSettings": {
+    "robgaleano/swift-1.5-qwen3.8-27b-mlx-8bit": {
+      "effortLevel": "high"
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "/opt/homebrew/bin/rtk hook claude" }]
+      }
+    ]
+  }
+}

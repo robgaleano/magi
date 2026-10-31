@@ -1,0 +1,6 @@
+# Replace `youruser` with your macOS short user name (`id -un`) and 114688 with your total memory
+# in MB minus 16384 (114688 = 128 GB Mac). Install with:
+#   sudo visudo -f /etc/sudoers.d/mlx-iogpu
+# or simply run `mlx-ctl setup-memory-limit`, which does this for you.
+# It allows exactly these two commands without a password, nothing else.
+youruser ALL=(root) NOPASSWD: /usr/sbin/sysctl -w iogpu.wired_limit_mb=114688, /usr/sbin/sysctl -w iogpu.wired_limit_mb=0

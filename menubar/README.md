@@ -1,0 +1,48 @@
+# mlx-menubar
+
+A small native macOS menu bar app (one Swift file, no dependencies) for the MAGI server.
+
+<p>
+  <img src="../assets/menubar-idle.png" height="29" alt="Idle">&nbsp;&nbsp;
+  <img src="../assets/menubar-generating.png" height="29" alt="Generating">
+</p>
+
+<img src="../assets/menubar-dropdown.png" width="295" alt="Dropdown">
+
+## Icon
+
+| State | Menu bar |
+| :--- | :--- |
+| Generating | pink brain (the 🧠 emoji's colour, `#F8B0C8`), slowly pulsing, with the **live** tok/s |
+| Loaded, idle | monochrome brain |
+| Not loaded / server offline | dimmed brain |
+| Loading, restarting, speed test | hourglass |
+
+Except while generating, the icon is a template image, so it follows the menu bar's light/dark appearance.
+
+## Menu
+
+| Item | Does |
+| :--- | :--- |
+| Header | Model, `8-bit · MTP drafter`, status dot |
+| Decode / Prefill | Live decode speed while generating, otherwise the last request's speeds |
+| GPU memory | Active MLX memory / GPU limit |
+| Prompt cache | In-RAM prompt cache / its cap |
+| Load model / Unload model (⌘L / ⌘U) | `POST /load` / `POST /unload` |
+| Reasoning ▸ | Off · Low · Medium · XHigh — server default, current one shown as a badge |
+| Clear prompt cache (⌘K) | Frees the in-RAM cache; hold **⌥** to also clear the disk cache |
+| Server ▸ | Restart · Stop/Start (through `launchctl`) · Speed test · Copy API URL · Open server log |
+| Setup guide | Opens `$MLX_SETUP_GUIDE` or `$MLX_HOME/README.md` |
+| Enable GPU memory limit… | Only shown until `/etc/sudoers.d/mlx-iogpu` exists |
+
+It also keeps the GPU limit in sync with the model state — see [docs/memory.md](../docs/memory.md#gpu-memory-limit-all-but-16-gib).
+
+## Install
+
+```bash
+./menubar/install.sh
+```
+
+Builds `mlx-menubar.swift` with `swiftc`, ad-hoc signs it, installs it as `$MLX_HOME/mlx-menubar` and registers `~/Library/LaunchAgents/com.local.mlx-menubar.plist` so it starts at every login. Re-run after editing the Swift file.
+
+Requires Xcode Command Line Tools. Polls `http://127.0.0.1:8080/v1/metrics` once a second; the live tok/s needs the server patch in [`server/patches/`](../server/patches).

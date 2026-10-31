@@ -1,0 +1,673 @@
+--- a/mlx_vlm/convert.py
++++ b/mlx_vlm/convert.py
+@@ -377,7 +377,9 @@
+             # Skip the index file - save_weights() already generated the correct one
+             if Path(file).name == "model.safetensors.index.json":
+                 continue
+-            shutil.copy(file, mlx_path)
++            dest_file = mlx_path / Path(file).name
++            shutil.copy(file, dest_file)
++            dest_file.chmod(0o644)
+ 
+     # Copy folders from the model path to the MLX path
+     for item in model_path.iterdir():
+--- a/mlx_vlm/generate/ar.py
++++ b/mlx_vlm/generate/ar.py
+@@ -1574,6 +1574,19 @@
+         self.uids = [
+             uid for uid, done in zip(self._all_uids, self._finished) if not done
+         ]
++        if not self.uids:
++            if self._rounds_iter is not None:
++                try:
++                    self._rounds_iter.close()
++                except Exception:
++                    pass
++                self._rounds_iter = None
++            if self.prompt_cache:
++                self.prompt_cache.clear()
++            self.hidden = None
++            self.shared_kv_states = None
++            self.first_tokens = None
++            self.prompt_tokens = None
+ 
+     def extend(self, other: "SpeculativeGenerationBatch"):
+         if len(self) == 0:
+@@ -2897,6 +2910,8 @@
+         if self._wire_stack is not None:
+             self._wire_stack.close()
+             self._wire_stack = None
++        self._prompt_batch = None
++        self._generation_batch = None
+ 
+     def __del__(self):
+         self.close()
+--- a/mlx_vlm/server/anthropic.py
++++ b/mlx_vlm/server/anthropic.py
+@@ -2,6 +2,7 @@
+ import gc
+ import json
+ import logging
++import os
+ import time
+ import traceback
+ import uuid
+@@ -400,26 +401,69 @@
+ def _anthropic_request_with_derived_fields(
+     request: AnthropicRequest,
+ ) -> AnthropicRequest:
++    model_lower = (request.model or "").strip().lower()
++    if model_lower.startswith("claude") or model_lower in (
++        "default",
++        "sonnet",
++        "opus",
++        "haiku",
++    ):
++        cached_model_path = runtime.model_cache.get("model_path") or os.environ.get(
++            "MLX_VLM_DEFAULT_MODEL", "mlx-community/Qwen3.8-27B-8bit"
++        )
++        if cached_model_path:
++            request.model = cached_model_path
++
++    default_effort = (
++        os.environ.get("MLX_VLM_DEFAULT_REASONING_EFFORT", "medium").strip().lower()
++    )
+     thinking = _as_plain_dict(request.thinking)
+-    if request.enable_thinking is None and isinstance(thinking, dict):
++    if default_effort == "off":
++        request.enable_thinking = False
++        request.reasoning_effort = None
++    elif request.enable_thinking is None and isinstance(thinking, dict):
+         thinking_type = thinking.get("type")
+         if thinking_type in ("enabled", "adaptive"):
+             request.enable_thinking = True
+         elif thinking_type == "disabled":
+             request.enable_thinking = False
+-    if request.thinking_budget is None and isinstance(thinking, dict):
++    has_drafter = bool(
++        getattr(runtime.config, "draft_model", None)
++        or os.environ.get("MLX_VLM_DRAFT_MODEL")
++    )
++    if (
++        default_effort != "off"
++        and request.thinking_budget is None
++        and isinstance(thinking, dict)
++    ):
+         budget = thinking.get("budget_tokens")
+         if budget is not None:
+-            request.thinking_budget = int(budget)
++            budget_int = int(budget)
++            if has_drafter:
++                if request.reasoning_effort is None:
++                    if default_effort in ("low", "medium", "xhigh"):
++                        request.reasoning_effort = default_effort
++                    else:
++                        request.reasoning_effort = (
++                            "low"
++                            if budget_int <= 4096
++                            else ("medium" if budget_int <= 16384 else "xhigh")
++                        )
++            else:
++                request.thinking_budget = budget_int
+ 
+     output_config = _as_plain_dict(request.output_config)
+-    if request.response_format is None and isinstance(output_config, dict):
+-        fmt = _as_plain_dict(output_config.get("format"))
+-        if isinstance(fmt, dict) and fmt.get("type") == "json_schema":
+-            request.response_format = {
+-                "type": "json_schema",
+-                "json_schema": {"schema": fmt.get("schema", {})},
+-            }
++    if isinstance(output_config, dict):
++        effort = output_config.get("effort")
++        if effort is not None and request.reasoning_effort is None:
++            request.reasoning_effort = str(effort).strip().lower()
++        if request.response_format is None and not has_drafter:
++            fmt = _as_plain_dict(output_config.get("format"))
++            if isinstance(fmt, dict) and fmt.get("type") == "json_schema":
++                request.response_format = {
++                    "type": "json_schema",
++                    "json_schema": {"schema": fmt.get("schema", {})},
++                }
+     return request
+ 
+ 
+--- a/mlx_vlm/server/app.py
++++ b/mlx_vlm/server/app.py
+@@ -3,6 +3,7 @@
+ import logging
+ import os
+ import secrets
++import subprocess
+ import sys
+ import time
+ from contextlib import asynccontextmanager
+@@ -46,6 +47,7 @@
+     get_quantized_kv_split_bits,
+     get_quantized_kv_start,
+     get_top_logprobs_k,
++    live_decode_snapshot,
+ )
+ from .model_discovery import MODEL_PATHS_ENV, discover_models
+ from .openai import register_routes as register_openai_routes
+@@ -64,7 +66,47 @@
+ 
+ _as_plain_dict = _request_normalization._as_plain_dict
+ 
++DEFAULT_MOUNTED_IOGPU_LIMIT_MB = 114688  # fallback (128 GB Mac: 112 GiB GPU / 16 GiB macOS); start-server.sh sets MLX_IOGPU_WIRED_LIMIT_MB from total memory
+ 
++
++def _get_iogpu_wired_limit_mb() -> int:
++    try:
++        res = subprocess.run(
++            ["/usr/sbin/sysctl", "-n", "iogpu.wired_limit_mb"],
++            capture_output=True,
++            text=True,
++            timeout=2,
++        )
++        if res.returncode == 0 and res.stdout.strip().isdigit():
++            return int(res.stdout.strip())
++    except Exception:
++        pass
++    return 0
++
++
++def _set_iogpu_wired_limit_mb(limit_mb: int) -> bool:
++    try:
++        res = subprocess.run(
++            [
++                "/usr/bin/sudo",
++                "-n",
++                "/usr/sbin/sysctl",
++                "-w",
++                f"iogpu.wired_limit_mb={int(limit_mb)}",
++            ],
++            capture_output=True,
++            text=True,
++            timeout=3,
++        )
++        if res.returncode == 0:
++            logger.info("Set macOS iogpu.wired_limit_mb=%d", int(limit_mb))
++            return True
++    except Exception as exc:
++        logger.debug("Could not set iogpu.wired_limit_mb=%d: %s", int(limit_mb), exc)
++    return False
++
++
++
+ def _server_api_key() -> Optional[str]:
+     key = os.environ.get(SERVER_API_KEY_ENV)
+     return key if key else None
+@@ -181,6 +223,20 @@
+             if runtime.apc_manager is None
+             else {"enabled": True, **runtime.apc_manager.stats_snapshot()}
+         ),
++        "mlx_memory": {
++            "active_bytes": int(mx.get_active_memory()),
++            "cache_bytes": int(mx.get_cache_memory()),
++            "peak_bytes": int(mx.get_peak_memory()),
++            "default_model": os.environ.get(
++                "MLX_VLM_DEFAULT_MODEL", "mlx-community/Qwen3.8-27B-8bit"
++            ),
++            "draft_model": getattr(runtime.config, "draft_model", None)
++            or os.environ.get("MLX_VLM_DRAFT_MODEL"),
++            "reasoning_effort": os.environ.get(
++                "MLX_VLM_DEFAULT_REASONING_EFFORT", "medium"
++            ),
++            "iogpu_wired_limit_mb": _get_iogpu_wired_limit_mb(),
++        },
+     }
+ 
+ 
+@@ -404,6 +460,7 @@
+     model_path = os.environ.pop("MLX_VLM_PRELOAD_MODEL", None)
+     adapter_path = os.environ.pop("MLX_VLM_PRELOAD_ADAPTER", None)
+     if model_path:
++        os.environ.setdefault("MLX_VLM_DEFAULT_MODEL", model_path)
+         logger.info("Pre-loading language model: %s", model_path)
+         get_cached_model(model_path, adapter_path, model_kind="text_generation")
+         kv_bits = os.environ.get("KV_BITS")
+@@ -511,6 +568,31 @@
+ _INHERIT_ADAPTER = object()
+ 
+ 
++def _free_mlx_object(obj, _seen=None) -> None:
++    if obj is None:
++        return
++    if _seen is None:
++        _seen = set()
++    obj_id = id(obj)
++    if obj_id in _seen:
++        return
++    _seen.add(obj_id)
++    if isinstance(obj, dict):
++        for val in list(obj.values()):
++            _free_mlx_object(val, _seen)
++        try:
++            obj.clear()
++        except Exception:
++            pass
++    elif isinstance(obj, list):
++        for item in list(obj):
++            _free_mlx_object(item, _seen)
++        try:
++            obj.clear()
++        except Exception:
++            pass
++
++
+ def _unload_model_cache_group(cache_group: str) -> bool:
+     registry = _model_cache_registry()
+     cache = registry.for_kind(cache_group)
+@@ -532,9 +614,16 @@
+         apc_manager.clear()
+ 
+     response_generator = cache.get("response_generator")
++    draft_model = getattr(response_generator, "draft_model", None)
++    model = cache.get("model") or getattr(response_generator, "model", None)
+     if response_generator is not None:
+         logger.info("Stopping response generator.")
+         response_generator.stop_and_join()
++        response_generator.model = None
++        response_generator.draft_model = None
++        response_generator.processor = None
++        response_generator.tokenizer = None
++        response_generator.apc_manager = None
+         if runtime.response_generator is response_generator:
+             runtime.response_generator = None
+ 
+@@ -549,9 +638,31 @@
+     if "vision_cache" in cache:
+         cache["vision_cache"].clear()
+ 
++    if draft_model is not None:
++        try:
++            draft_model._input_embed = None
++            draft_model._lm_head_fn = None
++            draft_model._cache = []
++            draft_model._seed_token = None
++            draft_model._seed_hidden = None
++        except Exception:
++            pass
++        _free_mlx_object(draft_model)
++    if model is not None:
++        _free_mlx_object(model)
++
++    cache.clear()
+     registry.pop(cache_group)
++    model = None
++    draft_model = None
++    response_generator = None
++    apc_manager = None
+     gc.collect()
+     mx.clear_cache()
++    try:
++        mx.reset_peak_memory()
++    except Exception:
++        pass
+     return True
+ 
+ 
+@@ -608,6 +719,19 @@
+         effective_model_kind = "text_generation" if model_kind == "auto" else model_kind
+ 
+     registry = _model_cache_registry()
++    if cache_group == "text_generation":
++        default_m = os.environ.get("MLX_VLM_DEFAULT_MODEL")
++        if default_m and (
++            not model_path
++            or model_path in (
++                "default",
++                "mlx-community/Qwen3.8-27B-8bit",
++                "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
++                "Swift-1.5-Qwen3.8-27B-8bit",
++                "ukisai/Swift-1.5-Qwen3.8-27b",
++            )
++        ):
++            model_path = default_m
+     if adapter_path is _INHERIT_ADAPTER:
+         cached_cache = registry.for_kind(cache_group)
+         cached = cached_cache.get("cache_key")
+@@ -975,6 +1099,10 @@
+     registry.set(cache_group, cache)
+     runtime.response_generator = response_generator
+     runtime.apc_manager = cache["apc_manager"]
++    mounted_limit_mb = int(
++        os.environ.get("MLX_IOGPU_WIRED_LIMIT_MB", str(DEFAULT_MOUNTED_IOGPU_LIMIT_MB))
++    )
++    _set_iogpu_wired_limit_mb(mounted_limit_mb)
+ 
+     return model, processor, config
+ 
+@@ -1009,6 +1137,7 @@
+     runtime.apc_manager = None
+     gc.collect()
+     mx.clear_cache()
++    _set_iogpu_wired_limit_mb(0)
+     if unloaded_any:
+         logger.info("Model caches cleared.")
+     return unloaded_any
+@@ -1094,6 +1223,10 @@
+         if model["id"] not in models and model["path"] not in loaded_paths:
+             models[model["id"]] = _model_info(model["id"], model["created"])
+ 
++    default_alias = "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit"
++    if default_alias not in models:
++        models[default_alias] = _model_info(default_alias, 1793100000)
++
+     return {
+         "object": "list",
+         "data": sorted(models.values(), key=lambda model: model["id"].lower()),
+@@ -1125,6 +1258,23 @@
+ 
+ @app.middleware("http")
+ async def add_server_header(request: Request, call_next):
++    client_host = (request.client.host if request.client else "") or ""
++    if client_host and client_host not in ("127.0.0.1", "::1", "localhost"):
++        import ipaddress
++        try:
++            ip = ipaddress.ip_address(client_host)
++            is_tailscale = (
++                ip in ipaddress.ip_network("100.64.0.0/10")
++                or ip in ipaddress.ip_network("fd7a:115c:a1e0::/48")
++            )
++            if not is_tailscale and not ip.is_loopback:
++                from fastapi.responses import JSONResponse
++                return JSONResponse(
++                    status_code=403,
++                    content={"detail": "Forbidden: only localhost and Tailscale peers are allowed."},
++                )
++        except ValueError:
++            pass
+     response = await call_next(request)
+     response.headers["Server"] = f"mlx_vlm/{__version__}"
+     return response
+@@ -1157,6 +1307,7 @@
+     _require_management_api_key(request)
+     payload = runtime.metrics.snapshot()
+     payload["server"] = _server_runtime_snapshot()
++    payload["live"] = live_decode_snapshot()
+     return payload
+ 
+ 
+@@ -1176,10 +1327,24 @@
+ @app.post("/cache/reset", include_in_schema=False)
+ async def apc_cache_reset(request: Request):
+     _require_management_api_key(request)
+-    if runtime.apc_manager is None:
+-        return {"enabled": False}
+-    runtime.apc_manager.clear()
+-    return {"enabled": True, "status": "cleared"}
++    include_disk = request.query_params.get("include_disk", "").lower() in (
++        "1",
++        "true",
++        "yes",
++    )
++    if runtime.apc_manager is not None:
++        runtime.apc_manager.clear()
++        if include_disk:
++            disk_store = getattr(runtime.apc_manager, "_disk", None)
++            if disk_store is not None and hasattr(disk_store, "clear"):
++                disk_store.clear()
++    gc.collect()
++    mx.clear_cache()
++    return {
++        "enabled": runtime.apc_manager is not None,
++        "status": "cleared",
++        "include_disk": include_disk,
++    }
+ 
+ 
+ @app.get("/v1/moe-offload/stats")
+@@ -1244,6 +1409,7 @@
+ 
+ 
+ @app.post("/unload")
++@app.post("/v1/unload", include_in_schema=False)
+ async def unload_model_endpoint(request: Request):
+     """
+     Unload the currently loaded model from memory.
+@@ -1257,6 +1423,8 @@
+     }
+ 
+     if not unload_model_sync():  # Use the synchronous unload function
++        gc.collect()
++        mx.clear_cache()
+         return {"status": "no_model_loaded", "message": "No model is currently loaded"}
+ 
+     return {
+@@ -1266,6 +1434,54 @@
+     }
+ 
+ 
++@app.post("/load")
++@app.post("/v1/load", include_in_schema=False)
++async def load_model_endpoint(request: Request):
++    """
++    Load (mount) the default or specified model into Unified Memory.
++    """
++    _require_management_api_key(request)
++    body = {}
++    try:
++        body = await request.json()
++    except Exception:
++        body = {}
++    model_path = (
++        (body.get("model") if isinstance(body, dict) else None)
++        or os.environ.get("MLX_VLM_DEFAULT_MODEL")
++        or "mlx-community/Qwen3.8-27B-8bit"
++    )
++    await asyncio.to_thread(
++        get_cached_model, model_path, None, model_kind="text_generation"
++    )
++    return {
++        "status": "success",
++        "message": f"Model {model_path} mounted successfully",
++        "model": model_path,
++    }
++
++
++@app.post("/v1/reasoning-effort")
++@app.post("/reasoning-effort", include_in_schema=False)
++async def set_reasoning_effort_endpoint(request: Request):
++    """
++    Set the default reasoning effort (low, medium, xhigh, off).
++    """
++    _require_management_api_key(request)
++    body = await request.json()
++    effort = str((body or {}).get("effort", "medium")).strip().lower()
++    if effort in ("high", "max"):
++        effort = "xhigh"
++    elif effort in ("none", "disabled", "false", "0"):
++        effort = "off"
++    if effort not in ("low", "medium", "xhigh", "off"):
++        raise HTTPException(
++            status_code=400, detail=f"Invalid effort: {effort!r}"
++        )
++    os.environ["MLX_VLM_DEFAULT_REASONING_EFFORT"] = effort
++    return {"status": "success", "reasoning_effort": effort}
++
++
+ def main():
+     from .cli import main as cli_main
+ 
+--- a/mlx_vlm/server/generation.py
++++ b/mlx_vlm/server/generation.py
+@@ -55,7 +55,57 @@
+ METRICS_HISTORY_LIMIT = 100
+ METRICS_RECENT_LIMIT = 32
+ 
++# Live decode speed for in-flight requests (exposed as "live" in /v1/metrics).
++# Updated once per emitted token chunk; rate is measured over a short sliding window.
++LIVE_DECODE_WINDOW_S = 2.0
++LIVE_DECODE_STALE_S = 10.0
++_live_decode: dict = {}
++_live_decode_lock = Lock()
+ 
++
++def _live_decode_update(request_id, generated_tokens: int, now: float, finished: bool) -> None:
++    with _live_decode_lock:
++        if finished:
++            _live_decode.pop(request_id, None)
++            return
++        entry = _live_decode.get(request_id)
++        if entry is None:
++            entry = {"samples": deque(), "started_at": now}
++            _live_decode[request_id] = entry
++        samples = entry["samples"]
++        samples.append((now, generated_tokens))
++        while len(samples) > 2 and now - samples[0][0] > LIVE_DECODE_WINDOW_S:
++            samples.popleft()
++        entry["generated_tokens"] = generated_tokens
++        entry["updated_at"] = now
++
++
++def live_decode_snapshot() -> dict:
++    now = time.perf_counter()
++    requests = []
++    with _live_decode_lock:
++        for request_id in list(_live_decode):
++            entry = _live_decode[request_id]
++            if now - entry["updated_at"] > LIVE_DECODE_STALE_S:
++                del _live_decode[request_id]
++                continue
++            samples = entry["samples"]
++            (t0, n0), (t1, n1) = samples[0], samples[-1]
++            rate = (n1 - n0) / (t1 - t0) if t1 > t0 else 0.0
++            requests.append(
++                {
++                    "request_id": str(request_id),
++                    "generated_tokens": entry["generated_tokens"],
++                    "decode_tok_s": round(rate, 2),
++                }
++            )
++    return {
++        "in_flight_decoding": len(requests),
++        "decode_tok_s": round(sum(r["decode_tok_s"] for r in requests), 2),
++        "requests": requests,
++    }
++
++
+ class PromptTooLongError(ValueError):
+     """Raised when a request exceeds the configured server context budget."""
+ 
+@@ -1396,6 +1446,8 @@
+                 request_id,
+                 max(0.0, now - queued_at),
+             )
++
++        _live_decode_update(request_id, generated_tokens, now, finish_reason is not None)
+ 
+         elapsed = max(0.0, now - decode_started_at)
+         first_chunk_tokens = int(info.get("decode_first_chunk_tokens", 0) or 0)
+@@ -1681,6 +1733,11 @@
+             except Exception:
+                 logger.exception("Error closing APC after generation worker shutdown")
+             finally:
++                self.model = None
++                self.draft_model = None
++                self.processor = None
++                self.tokenizer = None
++                self.apc_manager = None
+                 clear_mlx_streams()
+ 
+     def _run_impl(self):
+@@ -1732,10 +1789,11 @@
+                 # Drop abandoned requests before doing more work.
+                 self._apply_cancellations(batch_gen, active)
+ 
+-                if new_items and batch_gen is not None and not active:
+-                    if not batch_gen.has_work:
+-                        batch_gen.close()
+-                        batch_gen = None
++                if batch_gen is not None and not active and not batch_gen.has_work:
++                    batch_gen.close()
++                    batch_gen = None
++                    gc.collect()
++                    mx.clear_cache()
+ 
+                 for request in new_items:
+                     rqueue = request.rqueue
+@@ -1834,11 +1892,18 @@
+                         ),
+                         **log_state,
+                     }
++                    request = rqueue = raw_inputs = args = images = input_ids = gen_kwargs = None
++                new_items = []
+ 
+                 if not active or batch_gen is None:
+                     continue
+ 
+                 self._step(batch_gen, active)
++                if batch_gen is not None and not active and not batch_gen.has_work:
++                    batch_gen.close()
++                    batch_gen = None
++                    gc.collect()
++                    mx.clear_cache()
+ 
+             except Exception as e:
+                 logger.exception("Error in generation thread")
+--- a/mlx_vlm/server/request_normalization.py
++++ b/mlx_vlm/server/request_normalization.py
+@@ -1,6 +1,7 @@
+ """Normalize compatible API requests into server generation arguments."""
+ 
+ import json
++import os
+ from typing import List, Optional, Tuple, Union
+ 
+ from ..generate import (
+@@ -111,7 +112,12 @@
+     normalized = str(effort).strip().lower()
+     if not normalized:
+         return None, None
+-    return normalized not in _DISABLED_REASONING_EFFORTS, normalized
++    enabled = normalized not in _DISABLED_REASONING_EFFORTS
++    if normalized in ("high", "max"):
++        normalized = "xhigh"
++    elif normalized == "minimal":
++        normalized = "low"
++    return enabled, (normalized if enabled else None)
+ 
+ 
+ def _standard_reasoning_control(
+@@ -231,6 +237,16 @@
+         # Preserve a model template's native default when the server default is
+         # off and the request did not express a reasoning preference.
+         template_reasoning = True if server_enable_thinking else None
++    if enable_thinking and reasoning_effort is None:
++        default_effort = (
++            os.environ.get("MLX_VLM_DEFAULT_REASONING_EFFORT", "medium").strip().lower()
++        )
++        if default_effort == "off":
++            enable_thinking = False
++            template_reasoning = False
++            reasoning_effort = None
++        else:
++            reasoning_effort = default_effort
+     default_temperature = _model_config_field_or_default(
+         processor, "temperature", DEFAULT_TEMPERATURE
+     )
+--- a/mlx_vlm/server/schemas.py
++++ b/mlx_vlm/server/schemas.py
+@@ -993,6 +993,7 @@
+     )
+     logit_bias: Optional[Any] = Field(None, description="Logit bias dict.")
+     enable_thinking: Optional[bool] = None
++    reasoning_effort: Optional[str] = None
+     thinking_budget: Optional[int] = None
+     thinking_start_token: Optional[str] = None
+     thinking_end_token: Optional[str] = None
+--- a/mlx_vlm/speculative/drafters/mtp_split.py
++++ b/mlx_vlm/speculative/drafters/mtp_split.py
+@@ -305,7 +305,9 @@
+         for name in self.tokenizer_files:
+             src = source_path / name
+             if src.exists():
+-                shutil.copy(src, output_path / name)
++                dst = output_path / name
++                shutil.copy(src, dst)
++                dst.chmod(0o644)
+ 
+         return output_path
+ 
