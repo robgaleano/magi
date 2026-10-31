@@ -27,6 +27,8 @@ The server listens on all interfaces so Tailscale devices can use it. Two layers
    sudo ./server/hardening/lan-lockdown.sh uninstall
    ```
 
+   `uninstall` removes the rules, the boot job **and** the key-only SSH setting, but leaves pf itself enabled. If Private Relay still reports "incompatible" afterwards, `sudo pfctl -d` turns pf off (macOS default).
+
    After this, SSH and Screen Sharing work over Tailscale only — not from the same Wi-Fi by local IP. Side effect: macOS turns off **iCloud Private Relay** ("Software installed on this Mac is incompatible with Private Relay") while pf is enabled; Safari still works, just without Private Relay. `--ssh-keys-only` refuses to run if `~/.ssh/authorized_keys` is empty, so you can't lock yourself out.
 
    The macOS Application Firewall (System Settings → Network → Firewall) is a different tool: it allows or blocks *apps*, not networks, so it can't express "Tailscale yes, Wi-Fi no".

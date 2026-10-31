@@ -89,7 +89,8 @@ case "$ACTION" in
     launchctl bootout system "$PLIST" 2>/dev/null || true
     pfctl -a "$ANCHOR" -F all 2>/dev/null || true
     rm -f "$PLIST" "$LOADER" "$RULES" "$SSHD_DROPIN"
-    echo "Removed. (pf itself stays enabled with no MAGI rules; harmless.)"
+    echo "Removed rules, boot job and the SSH keys-only setting. pf itself stays enabled with no MAGI rules;"
+    echo "if iCloud Private Relay still reports \"incompatible\", run: sudo pfctl -d"
     ;;
   *) echo "Usage: sudo $0 install [--ssh-keys-only] | status | uninstall" >&2; exit 1 ;;
 esac
