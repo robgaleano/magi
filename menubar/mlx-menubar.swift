@@ -248,6 +248,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var pulseTimer: Timer?
     var pulseStart = Date()
     var pulseValue = "…"
+    var pulseLabel = "TOK/S"
 
     func setBarIcon(_ symbol: String, label: String? = nil, value: String? = nil, dim: Bool = false,
                     tint: NSColor? = nil, alpha: CGFloat = 1) {
@@ -289,10 +290,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func drawPulse() {
         let phase = Date().timeIntervalSince(pulseStart) / pulsePeriod * 2 * .pi
         let alpha = 0.35 + 0.65 * (0.5 + 0.5 * cos(phase))
-        setBarIcon("brain.fill", label: "TOK/S", value: pulseValue, tint: pulseColor, alpha: alpha)
+        setBarIcon("brain.fill", label: pulseLabel, value: pulseValue, tint: pulseColor, alpha: alpha)
     }
 
-    func startPulse(value: String) {
+    func startPulse(label: String = "TOK/S", value: String) {
+        pulseLabel = label
         pulseValue = value
         guard pulseTimer == nil else { return }
         pulseStart = Date()
@@ -343,6 +345,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let mem = server["mlx_memory"] as? [String: Any] ?? [:]
         let live = root["live"] as? [String: Any] ?? [:]
         let liveDecode = live["decode_tok_s"] as? Double ?? 0
+        // Prompt still being read (prefill): show its progress instead of a speed.
+        let livePrefill = (live["prefill"] as? [[String: Any]])?.first
+        let prefillPercent = livePrefill?["percent"] as? Double
+        let prefillTotal = livePrefill?["total"] as? Int ?? 0
 
         serverRunning = true
         let loaded = server["loaded_model"] as? String
@@ -370,7 +376,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let generating = inFlight > 0 && busy == nil && modelLoaded
         let shownDecode = generating && liveDecode > 0 ? liveDecode : decode
         decodeRow.set(shownDecode > 0 ? String(format: "%.1f tok/s", shownDecode) : nil)
-        prefillRow.set(prefill > 0 ? "\(grouped(prefill)) tok/s" : nil)
+        if generating, liveDecode == 0, let pct = prefillPercent {
+            prefillRow.set(String(format: "%.0f%% of %@ tokens", pct, grouped(Double(prefillTotal))))
+        } else {
+            prefillRow.set(prefill > 0 ? "\(grouped(prefill)) tok/s" : nil)
+        }
         if modelLoaded {
             memoryRow.set(wiredMB > 0 ? String(format: "%.1f / %.0f GiB", active, Double(wiredMB) / 1024) : String(format: "%.1f GiB", active))
             cacheRow.set(apcMax > 0 ? String(format: "%.1f / %.0f GiB", apcUsed, apcMax) : nil)
@@ -389,7 +399,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         header.update(model: modelName, detail: detail, status: status)
 
         if case .generating = status {
-            startPulse(value: liveDecode > 0 ? String(format: "%.1f", liveDecode) : "…")
+            if liveDecode == 0, let pct = prefillPercent {
+                startPulse(label: "PROMPT", value: String(format: "%.0f%%", pct))
+            } else {
+                startPulse(value: liveDecode > 0 ? String(format: "%.1f", liveDecode) : "…")
+            }
         } else {
             stopPulse()
             switch status {

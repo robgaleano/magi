@@ -493,7 +493,7 @@
  
 --- a/mlx_vlm/server/generation.py
 +++ b/mlx_vlm/server/generation.py
-@@ -55,7 +55,57 @@
+@@ -55,7 +55,86 @@
  METRICS_HISTORY_LIMIT = 100
  METRICS_RECENT_LIMIT = 32
  
@@ -503,10 +503,23 @@
 +LIVE_DECODE_STALE_S = 10.0
 +_live_decode: dict = {}
 +_live_decode_lock = Lock()
++# Prompt-processing progress for in-flight requests (cleared when decoding starts).
++LIVE_PREFILL_STALE_S = 120.0
++_live_prefill: dict = {}
  
++
++def _live_prefill_update(request_id, processed: int, total: int) -> None:
++    with _live_decode_lock:
++        _live_prefill[request_id] = {
++            "processed": int(processed),
++            "total": int(total),
++            "updated_at": time.perf_counter(),
++        }
++
 +
 +def _live_decode_update(request_id, generated_tokens: int, now: float, finished: bool) -> None:
 +    with _live_decode_lock:
++        _live_prefill.pop(request_id, None)
 +        if finished:
 +            _live_decode.pop(request_id, None)
 +            return
@@ -541,7 +554,23 @@
 +                    "decode_tok_s": round(rate, 2),
 +                }
 +            )
++        prefill = []
++        for request_id in list(_live_prefill):
++            entry = _live_prefill[request_id]
++            if now - entry["updated_at"] > LIVE_PREFILL_STALE_S:
++                del _live_prefill[request_id]
++                continue
++            total = entry["total"]
++            prefill.append(
++                {
++                    "request_id": str(request_id),
++                    "processed": entry["processed"],
++                    "total": total,
++                    "percent": round(100.0 * entry["processed"] / total, 1) if total else 0.0,
++                }
++            )
 +    return {
++        "prefill": prefill,
 +        "in_flight_decoding": len(requests),
 +        "decode_tok_s": round(sum(r["decode_tok_s"] for r in requests), 2),
 +        "requests": requests,
@@ -551,7 +580,15 @@
  class PromptTooLongError(ValueError):
      """Raised when a request exceeds the configured server context budget."""
  
-@@ -1396,6 +1446,8 @@
+@@ -1333,6 +1412,7 @@
+             if processed <= int(info.get("prefill_processed", -1)):
+                 continue
+             info["prefill_processed"] = processed
++            _live_prefill_update(info.get("request_id", uid), processed, total)
+             percent = 100.0 * processed / total if total > 0 else 100.0
+             logger.info(
+                 "Prefill progress: request=%s tokens=%d/%d (%.1f%%)",
+@@ -1396,6 +1476,8 @@
                  request_id,
                  max(0.0, now - queued_at),
              )
@@ -560,7 +597,7 @@
  
          elapsed = max(0.0, now - decode_started_at)
          first_chunk_tokens = int(info.get("decode_first_chunk_tokens", 0) or 0)
-@@ -1681,6 +1733,11 @@
+@@ -1681,6 +1763,11 @@
              except Exception:
                  logger.exception("Error closing APC after generation worker shutdown")
              finally:
@@ -572,7 +609,7 @@
                  clear_mlx_streams()
  
      def _run_impl(self):
-@@ -1732,10 +1789,11 @@
+@@ -1732,10 +1819,11 @@
                  # Drop abandoned requests before doing more work.
                  self._apply_cancellations(batch_gen, active)
  
@@ -588,7 +625,7 @@
  
                  for request in new_items:
                      rqueue = request.rqueue
-@@ -1834,11 +1892,18 @@
+@@ -1834,11 +1922,18 @@
                          ),
                          **log_state,
                      }

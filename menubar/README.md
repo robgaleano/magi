@@ -13,6 +13,7 @@ A small native macOS menu bar app (one Swift file, no dependencies) for the MAGI
 
 | State | Menu bar |
 | :--- | :--- |
+| Reading a long prompt | pink brain, slowly pulsing, with `PROMPT` and the percentage of the prompt processed |
 | Generating | pink brain (the 🧠 emoji's colour, `#F8B0C8`), slowly pulsing, with the **live** tok/s |
 | Loaded, idle | monochrome brain |
 | Not loaded / server offline | dimmed brain |
@@ -25,7 +26,7 @@ Except while generating, the icon is a template image, so it follows the menu ba
 | Item | Does |
 | :--- | :--- |
 | Header | Model, `8-bit · MTP drafter`, status dot |
-| Decode / Prefill | Live decode speed while generating, otherwise the last request's speeds |
+| Decode / Prefill | Live decode speed while generating and prompt progress ("82% of 69,561 tokens") while reading; otherwise the last request's speeds |
 | GPU memory | Active MLX memory / GPU limit |
 | Prompt cache | In-RAM prompt cache / its cap |
 | Load model / Unload model (⌘L / ⌘U) | `POST /load` / `POST /unload` |

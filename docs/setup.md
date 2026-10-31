@@ -83,7 +83,7 @@ To try a different value without editing files: `launchctl setenv KV_MODE q8`, r
 | File | Change |
 | :--- | :--- |
 | `generate/ar.py` | Idle-memory fix: the speculative batch frees its KV cache and hidden states when the last request finishes |
-| `server/generation.py` | Idle-memory fix (closes the batch generator as soon as the server is idle); model-unload cleanup; live decode tok/s tracker |
+| `server/generation.py` | Idle-memory fix (closes the batch generator as soon as the server is idle); model-unload cleanup; live decode tok/s and prompt-progress tracker |
 | `server/app.py` | GPU memory limit on load/unload (`MLX_IOGPU_WIRED_LIMIT_MB`); `/load` endpoint and full memory release on `/unload`; `/v1/reasoning-effort`; `"live"` block in `/v1/metrics`; only localhost and Tailscale clients allowed (others get HTTP 403) |
 | `server/anthropic.py` | Maps `claude-*`, `sonnet`, `opus`, `haiku` model IDs to the loaded model so Claude Code never triggers a model swap |
 | `server/request_normalization.py` | Default reasoning level from `MLX_VLM_DEFAULT_REASONING_EFFORT`; `high`/`max` → `xhigh`, `minimal` → `low` |
