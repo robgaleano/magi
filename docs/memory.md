@@ -52,6 +52,8 @@ What fits, measured:
 
 So the RAM cache realistically holds **one** long agent session; the SSD tier holds one or two more. Switching between several long sessions means the evicted ones are rebuilt (an 86K-token rebuild took ~132 s). A follow-up in the cached session is fast: 6.4 s for a 140K-token prompt instead of 279 s.
 
+The 40 GB disk cap applies **per cache folder**, and each model or `KV_MODE` change starts a new folder under `~/.cache/mlx-vlm/apc/`. After switching, delete the old folders — keep the one named in the latest `APC disk tier at …` line of `server.log`.
+
 `mlx-ctl clear-cache` frees the RAM cache without unloading the model. Chat history lives in the clients (Hermes, Claude Code, …), so nothing is lost — the next request just rebuilds its prefix.
 
 Why 32 GiB: on the 128 GB test machine, a full 32 GiB cache plus the model and a 140K-token request peaked at 73.7 GiB, far from the 112 GiB limit, with no swap. On a 64 GB Mac, start with `APC_MEMORY_MAX_GB=8`–`12`.
