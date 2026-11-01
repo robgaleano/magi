@@ -12,6 +12,8 @@ Running the server on a Mac with no monitor attached and using it from other dev
 | **Telegram** | Akari's Hermes gateway can run a Telegram bot. Always restrict it to your own user ID (`TELEGRAM_ALLOWED_USERS` in `~/.hermes/.env`) — anyone who can message the bot can drive the agent. Supports text, voice notes (transcribed locally) and slash commands such as `/status`, `/compress`, `/effort`, `/cron`. |
 | **Hermes web UI** (optional, not enabled) | `hermes dashboard` serves on `127.0.0.1:9119`; `tailscale serve --bg --https 9443 http://127.0.0.1:9119` would expose it to the tailnet only. |
 
+Moshi attaches to an existing tmux session, and a restart wipes tmux. To always have one, create it at login, e.g. a LaunchAgent running `tmux has-session -t main 2>/dev/null || tmux new-session -d -s main`.
+
 To use the model from another computer, point its clients at `http://<mac-tailscale-ip>:8080/v1` with the API key.
 
 Once everything works over Tailscale, run [`server/hardening/lan-lockdown.sh`](../server/hardening/lan-lockdown.sh) so SSH, Screen Sharing, the model server and mosh are unreachable from the local network ([security.md](security.md#network-access)).

@@ -18,7 +18,7 @@ The server listens on all interfaces so Tailscale devices can use it. Two layers
 
 1. **In the server** ([local patch](setup.md#local-mlx-vlm-patch)): only `127.0.0.1`/`::1` and Tailscale addresses (`100.64.0.0/10`, `fd7a:115c:a1e0::/48`) are served; other clients get HTTP 403. Caveat: `100.64.0.0/10` is shared carrier-grade NAT space, and some phone hotspots and ISPs hand out addresses from it — on such a network other devices would pass this check. The API key and the firewall below cover that case.
 
-2. **Firewall** — [`server/hardening/lan-lockdown.sh`](../server/hardening/lan-lockdown.sh) adds macOS `pf` rules that drop incoming SSH (22), Screen Sharing (5900), the MAGI server (8080) and mosh (UDP 60000–61000) on every physical interface (Ethernet, Wi-Fi, Thunderbolt). Tailscale (`utun*`) and localhost aren't affected. A LaunchDaemon re-applies the rules at boot.
+2. **Firewall** — [`server/hardening/lan-lockdown.sh`](../server/hardening/lan-lockdown.sh) adds macOS `pf` rules that drop incoming SSH (22), Screen Sharing (5900), the MAGI server (8080) and mosh (UDP 60000–61000) on every physical interface (Ethernet, Wi-Fi, Thunderbolt). Tailscale (`utun*`) and localhost aren't affected. Replies to the Mac's own outgoing UDP are passed by state, so DNS/QUIC replies that happen to use ports 60000–61000 still get through. A LaunchDaemon re-applies the rules at boot.
 
    ```bash
    sudo ./server/hardening/lan-lockdown.sh install                  # firewall rules
