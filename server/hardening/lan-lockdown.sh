@@ -34,6 +34,9 @@ write_loader() {
 IFACES=\$(/usr/sbin/networksetup -listallhardwareports | /usr/bin/awk '/^Device: /{printf "%s ", \$2}')
 {
   echo "# Generated \$(date) — physical interfaces: \$IFACES"
+  # Track the Mac's own outgoing UDP so replies (DNS, QUIC, …) that land on a port in the
+  # mosh range below are matched by state and not dropped. New inbound UDP is still blocked.
+  echo "pass out proto udp from any to any keep state"
   echo "block drop in quick on { \$IFACES} proto tcp from any to any port { $TCP_PORTS }"
   echo "block drop in quick on { \$IFACES} proto udp from any to any port $UDP_PORTS"
 } > "$RULES"
