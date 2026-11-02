@@ -150,3 +150,22 @@ To go back to Anthropic's cloud: remove `~/.claude/settings.json`.
 ## Roo Code (VS Code)
 
 Use an OpenAI-compatible provider with base URL `http://127.0.0.1:8080/v1`, the server's API key, the model ID above, context window `131072` and max output `16384`.
+
+## Google Stitch (optional, UI design)
+
+[Stitch](https://stitch.withgoogle.com) designs screens with Gemini in Google's cloud — it can't run on the local model — but Claude Code on the local model can use it through Stitch's remote MCP server and then implement the designs locally.
+
+```bash
+# Key from Stitch settings (MCP key), stored outside any repo:
+mkdir -p ~/.config/magi && (umask 077; read -rs K && printf '%s' "$K" > ~/.config/magi/stitch-api-key)
+# Helper that hands Claude Code the header without writing the key into its config:
+cat > ~/.config/magi/stitch-headers.sh <<'SH'
+#!/bin/sh
+printf '{"X-Goog-Api-Key":"%s"}\n' "$(tr -d '[:space:]' < "$HOME/.config/magi/stitch-api-key")"
+SH
+chmod 700 ~/.config/magi/stitch-headers.sh
+claude mcp add-json stitch "{\"type\":\"http\",\"url\":\"https://stitch.googleapis.com/mcp\",\"headersHelper\":\"$HOME/.config/magi/stitch-headers.sh\"}" --scope user
+claude mcp list   # stitch … ✔ Connected
+```
+
+User scope makes it available in both the `claude` CLI and the VS Code extension. Prompts and designs sent to Stitch are processed and stored by Google.
