@@ -455,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let f = DateFormatter()
                 f.dateFormat = "HH:mm"
                 let when = f.string(from: Date(timeIntervalSinceNow: -ctx.age))
-                contextRow.set("last session \(label) · \(when)")
+                contextRow.set("\(String(format: "%.1fK", Double(ctx.tokens) / 1000)) at \(when)")
             } else if ctx.tokens >= ctxNew {
                 contextRow.set("\(label) · start new session", color: .systemRed)
                 if ctx.age < ctxStaleAfter { ctxAlert = "\(ctx.tokens / 1000)K" }

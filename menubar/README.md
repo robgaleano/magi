@@ -31,7 +31,7 @@ Except while generating, the icon is a template image, so it follows the menu ba
 | Decode / Prefill | Live decode speed while generating and prompt progress ("82% of 69,561 tokens") while reading; otherwise the last request's speeds |
 | GPU memory | Active MLX memory / GPU limit |
 | Prompt cache | In-RAM prompt cache / its cap |
-| Context | Size of the current agent session: green < 40K, orange `getting slower` < 80K, red `start new session` above — see [docs/clients.md](../docs/clients.md#long-sessions-context-size-and-speed). Taken as the largest prompt within 2 minutes of the latest request (agents also send small side requests), so it can lag up to 2 minutes after `/clear`. After 30 minutes without requests it turns grey: `last session 45.3K tokens · 13:31` (nothing to do) |
+| Context | Size of the current agent session: green < 40K, orange `getting slower` < 80K, red `start new session` above — see [docs/clients.md](../docs/clients.md#long-sessions-context-size-and-speed). Taken as the largest prompt within 2 minutes of the latest request (agents also send small side requests), so it can lag up to 2 minutes after `/clear`. After 30 minutes without requests it turns grey: `45.3K at 13:31` (the last session) (nothing to do) |
 | Load model / Unload model (⌘L / ⌘U) | `POST /load` / `POST /unload` |
 | Reasoning ▸ | Off · Low · Medium · XHigh — server default, current one shown as a badge |
 | Clear prompt cache (⌘K) | Frees the in-RAM cache; hold **⌥** to also clear the disk cache |
