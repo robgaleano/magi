@@ -450,7 +450,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         var ctxAlert: String?
         if modelLoaded, let ctx {
             let label = compactTokens(ctx.tokens)
-            if ctx.tokens >= ctxNew {
+            if ctx.age >= ctxStaleAfter {
+                // Session ended a while ago: show it as history, not as a warning.
+                let f = DateFormatter()
+                f.dateFormat = "HH:mm"
+                let when = f.string(from: Date(timeIntervalSinceNow: -ctx.age))
+                contextRow.set("last session \(label) · \(when)")
+            } else if ctx.tokens >= ctxNew {
                 contextRow.set("\(label) · start new session", color: .systemRed)
                 if ctx.age < ctxStaleAfter { ctxAlert = "\(ctx.tokens / 1000)K" }
             } else if ctx.tokens >= ctxWarn {
