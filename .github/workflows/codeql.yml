@@ -1,6 +1,5 @@
-# CodeQL advanced setup. The default setup can't build Swift without an Xcode project
-# or Swift package, so the menu bar app is compiled manually with swiftc.
-# Shell scripts are not supported by CodeQL.
+# CodeQL advanced setup for GitHub Actions workflows (runs on every push).
+# Swift is analysed separately in codeql-swift.yml. Shell scripts are not supported by CodeQL.
 name: CodeQL
 
 on:
@@ -31,9 +30,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - language: swift
-            build-mode: manual
-            runner: macos-latest
+          # Swift is analysed in codeql-swift.yml, only when Swift code changes
+          # (it needs a macOS runner, which can be scarce on GitHub-hosted runners).
           - language: actions
             build-mode: none
             runner: ubuntu-latest
@@ -47,9 +45,6 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      - name: Build menu bar app
-        if: matrix.language == 'swift'
-        run: swiftc menubar/mlx-menubar.swift -o "$RUNNER_TEMP/mlx-menubar"
 
       - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:

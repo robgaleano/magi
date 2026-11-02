@@ -1,0 +1,59 @@
+# CodeQL advanced setup. The default setup can't build Swift without an Xcode project
+# or Swift package, so the menu bar app is compiled manually with swiftc.
+# Runs only when Swift code changes, weekly, or on demand: it needs a macOS runner,
+# which is sometimes unavailable on GitHub-hosted runners.
+name: CodeQL (Swift)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "menubar/**/*.swift"
+      - ".github/workflows/codeql-swift.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "menubar/**/*.swift"
+      - ".github/workflows/codeql-swift.yml"
+  schedule:
+    - cron: "27 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: swift
+            build-mode: manual
+            runner: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Build menu bar app
+        run: swiftc menubar/mlx-menubar.swift -o "$RUNNER_TEMP/mlx-menubar"
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}
