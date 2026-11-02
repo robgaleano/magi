@@ -11,7 +11,7 @@ Every client must send the server's key (`cat ~/.config/magi/api-key`) — see [
 | Client | Setting |
 | :--- | :--- |
 | Akari (Hermes Agent) | `OPENAI_API_KEY=<key>` in `~/.hermes/.env` (used by the custom provider), then restart the gateway |
-| Claude Code (CLI and VS Code extension) | `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` in `~/.claude/settings.json` and in VS Code's `claudeCode.environmentVariables` |
+| Claude Code (CLI and VS Code extension) | `ANTHROPIC_AUTH_TOKEN` in `~/.claude/settings.json` and in VS Code's `claudeCode.environmentVariables` (sent as `Authorization: Bearer`; don't also set `ANTHROPIC_API_KEY`) |
 | DeepSeek Harness | `LOCAL_MLX_API_KEY` in `~/.dsh/.credentials.yaml` |
 | Roo Code | the API key field of the OpenAI-compatible provider |
 | `mlx-ctl`, menu bar app | read `~/.config/magi/api-key` automatically |
@@ -135,7 +135,11 @@ ln -sf "$PWD/clients/claude-code/commands/handoff.md" ~/.claude/commands/handoff
 
 `/handoff [focus]` writes or updates `NOTES.md` in the project root (goal, state, decisions, files, next steps, how to verify, open questions; under 800 words, no secrets). Then run `/clear` and say *"Read NOTES.md and continue with the next step."* Add `NOTES.md` to `.gitignore` if it shouldn't be committed.
 
-The `claude` CLI ships inside the VS Code extension. [`clients/claude-code/claude-wrapper.sh`](../clients/claude-code/claude-wrapper.sh), installed as `~/.local/bin/claude`, always runs the newest installed version (a plain symlink broke on every extension update).
+Install the CLI with Homebrew: `brew install --cask claude-code` (→ `/opt/homebrew/bin/claude`). The VS Code extension bundles its own copy and reads the same `~/.claude/settings.json`.
+
+Without Homebrew, [`clients/claude-code/claude-wrapper.sh`](../clients/claude-code/claude-wrapper.sh), installed as `~/.local/bin/claude`, runs the newest binary bundled with the VS Code extension (a plain symlink broke on every extension update).
+
+`Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set · auth may not work as expected` at startup means both are set; remove `ANTHROPIC_API_KEY`. The server only checks the `Authorization: Bearer` header that `ANTHROPIC_AUTH_TOKEN` produces.
 
 To go back to Anthropic's cloud: remove `~/.claude/settings.json`.
 

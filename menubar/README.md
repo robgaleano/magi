@@ -50,3 +50,5 @@ It also keeps the GPU limit in sync with the model state — see [docs/memory.md
 Builds `mlx-menubar.swift` with `swiftc`, ad-hoc signs it, installs it as `$MLX_HOME/mlx-menubar` and registers `~/Library/LaunchAgents/com.local.mlx-menubar.plist` so it starts at every login. Re-run after editing the Swift file.
 
 Requires Xcode Command Line Tools. Polls `http://127.0.0.1:8080/v1/metrics` once a second, sending the key from `~/.config/magi/api-key` (or `$MAGI_API_KEY_FILE`); the live tok/s needs the server patch in [`server/patches/`](../server/patches). `MAGI_CTX_WARN` / `MAGI_CTX_NEW` (defaults 40000 / 80000) set the context thresholds.
+
+To regenerate the dropdown screenshot: `$MLX_HOME/mlx-menubar --snapshot-menu /tmp/menu.png` opens the menu, saves it with `screencapture` (the terminal needs Screen Recording permission) and quits; crop the shadow and copy it to `assets/menubar-dropdown.png`.

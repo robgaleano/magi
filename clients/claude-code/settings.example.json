@@ -3,7 +3,6 @@
   "env": {
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:8080",
     "ANTHROPIC_AUTH_TOKEN": "<contents of ~/.config/magi/api-key>",
-    "ANTHROPIC_API_KEY": "<contents of ~/.config/magi/api-key>",
     "ANTHROPIC_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",

@@ -30,7 +30,10 @@ A test copy was started by hand (`./mlx-menubar`) while the launchd copy was run
 `mlx-ctl` in Homebrew's `bin` is a symlink to `$MLX_HOME/mlx-ctl`, so editing the target updates it; copying onto it fails and breaks `&&` chains.
 
 ### `claude` command stops working after a VS Code update
-It was a symlink into a versioned extension folder that the update deleted. Use [`clients/claude-code/claude-wrapper.sh`](../clients/claude-code/claude-wrapper.sh), which finds the newest version.
+It was a symlink into a versioned extension folder that the update deleted. Install the CLI with `brew install --cask claude-code` instead, or use [`clients/claude-code/claude-wrapper.sh`](../clients/claude-code/claude-wrapper.sh), which finds the newest extension version.
+
+### Claude Code: `Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY set`
+Remove `ANTHROPIC_API_KEY` from `~/.claude/settings.json` and VS Code's `claudeCode.environmentVariables`. The server only reads `Authorization: Bearer`, which comes from `ANTHROPIC_AUTH_TOKEN`.
 
 ### Hermes plugin "not found" although it's installed
 Hermes keeps two `uv` environments under `~/.hermes/installs/<id>/environments/<env>/venv/`, and the gateway may load a different one than the CLI. Install Python dependencies into both (or `hermes pm repair`) and restart Hermes.

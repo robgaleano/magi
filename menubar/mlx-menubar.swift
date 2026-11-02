@@ -229,6 +229,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+
+        if let i = CommandLine.arguments.firstIndex(of: "--snapshot-menu"), i + 1 < CommandLine.arguments.count {
+            snapshotMenu(to: CommandLine.arguments[i + 1])
+        }
+    }
+
+    // `mlx-menubar --snapshot-menu out.png`: opens this app's menu, saves a screenshot of it
+    // with screencapture (needs Screen Recording for the launching terminal) and quits.
+    // Used to regenerate assets/menubar-dropdown.png.
+    func snapshotMenu(to path: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self else { return }
+            let capture = Timer(timeInterval: 1.5, repeats: false) { [weak self] _ in
+                let pid = Int(ProcessInfo.processInfo.processIdentifier)
+                let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+                let menuWindow = windows
+                    .filter { ($0[kCGWindowOwnerPID as String] as? Int) == pid && ($0[kCGWindowLayer as String] as? Int ?? 0) > 0 }
+                    .max { a, b in
+                        let ra = a[kCGWindowBounds as String] as? [String: Double] ?? [:]
+                        let rb = b[kCGWindowBounds as String] as? [String: Double] ?? [:]
+                        return (ra["Width"] ?? 0) * (ra["Height"] ?? 0) < (rb["Width"] ?? 0) * (rb["Height"] ?? 0)
+                    }
+                if let id = menuWindow?[kCGWindowNumber as String] as? Int {
+                    let task = Process()
+                    task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+                    task.arguments = ["-x", "-o", "-l", String(id), path]
+                    try? task.run()
+                    task.waitUntilExit()
+                } else {
+                    FileHandle.standardError.write("menu window not found\n".data(using: .utf8)!)
+                }
+                self?.statusItem.menu?.cancelTracking()
+                DispatchQueue.main.async { NSApp.terminate(nil) }
+            }
+            RunLoop.main.add(capture, forMode: .common)
+            self.statusItem.button?.performClick(nil)
+        }
     }
 
     func viewItem(_ view: NSView) -> NSMenuItem {
