@@ -12,7 +12,9 @@
     "CLAUDE_CODE_SUBAGENT_MODEL": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
     "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
-    "ENABLE_TOOL_SEARCH": "true"
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "131072",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "131072"
   },
   "model": "robgaleano/Swift-1.5-Qwen3.8-27B-MLX-8bit",
   "modelPicker": {
@@ -43,5 +45,10 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/llm/magi/clients/claude-code/statusline.sh",
+    "padding": 0
   }
 }

@@ -23,8 +23,8 @@
 | Folder | Contents |
 | :--- | :--- |
 | [`server/`](server) | `start-server.sh`, the `mlx-ctl` control script, the launchd service, pinned Python requirements, and the local `mlx-vlm` patch |
-| [`menubar/`](menubar) | Native macOS menu bar app (Swift): live tok/s, memory, load/unload, reasoning level |
-| [`clients/`](clients) | Config examples for Akari (Hermes Agent), Claude Code and DeepSeek Harness |
+| [`menubar/`](menubar) | Native macOS menu bar app (Swift): live tok/s, memory, context size, load/unload, reasoning level |
+| [`clients/`](clients) | Config examples for Akari (Hermes Agent), Claude Code (incl. context status line and `/handoff`) and DeepSeek Harness |
 | [`docs/`](docs) | Setup, memory tuning, benchmarks, clients, headless operation, troubleshooting |
 | [`server/quantize/`](server/quantize) | Scripts used to build and publish the 8-bit model on Hugging Face |
 
@@ -95,7 +95,7 @@ How the GPU limit, prompt cache and idle-memory fix work: [docs/memory.md](docs/
 - [Setup](docs/setup.md): install, `mlx-ctl`, the launchd service, upgrading and the local patch
 - [Memory](docs/memory.md): 112 GiB GPU / 16 GiB macOS split, prompt cache sizing, idle-memory fix, KV cache choice
 - [Benchmarks](docs/benchmarks.md): every measurement and how to repeat it
-- [Clients](docs/clients.md): Akari (Hermes Agent), Claude Code, DeepSeek Harness, Roo Code
+- [Clients](docs/clients.md): long sessions (context size vs speed), Akari (Hermes Agent), Claude Code, DeepSeek Harness, Roo Code
 - [Headless operation](docs/headless.md): remote access, Telegram, sleep and reboot behaviour
 - [Security](docs/security.md): API key, network access, firewall, what stays out of the repo
 - [Troubleshooting](docs/troubleshooting.md): problems hit while building this, and their fixes

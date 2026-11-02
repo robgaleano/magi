@@ -122,7 +122,10 @@ final class InfoRow: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func set(_ text: String?) { value.stringValue = text ?? "—" }
+    func set(_ text: String?, color: NSColor = .secondaryLabelColor) {
+        value.stringValue = text ?? "—"
+        value.textColor = color
+    }
 }
 
 // MARK: - App
@@ -141,6 +144,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     lazy var prefillRow = InfoRow(symbol: "arrow.down.to.line", title: "Prefill", width: menuWidth)
     lazy var memoryRow = InfoRow(symbol: "memorychip", title: "GPU memory", width: menuWidth)
     lazy var cacheRow = InfoRow(symbol: "square.stack.3d.up", title: "Prompt cache", width: menuWidth)
+    lazy var contextRow = InfoRow(symbol: "text.line.first.and.arrowtriangle.forward", title: "Context", width: menuWidth)
+
+    // Context size of the current agent session (docs/clients.md, "Long sessions").
+    // Below ctxWarn: full speed. ctxWarn–ctxNew: slower. Above ctxNew: start a new session.
+    let ctxWarn = Int(env["MAGI_CTX_WARN"] ?? "") ?? 40_000
+    let ctxNew = Int(env["MAGI_CTX_NEW"] ?? "") ?? 80_000
+    // Only nag in the menu bar while the session is recent.
+    let ctxStaleAfter: TimeInterval = 30 * 60
 
     let loadItem = NSMenuItem(title: "Load model", action: #selector(toggleModel), keyEquivalent: "l")
     let reasoningItem = NSMenuItem(title: "Reasoning", action: nil, keyEquivalent: "")
@@ -166,7 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(viewItem(header))
         menu.addItem(.separator())
-        for row in [decodeRow, prefillRow, memoryRow, cacheRow] { menu.addItem(viewItem(row)) }
+        for row in [decodeRow, prefillRow, memoryRow, cacheRow, contextRow] { menu.addItem(viewItem(row)) }
         menu.addItem(.separator())
 
         configure(loadItem, symbol: "arrow.down.circle")
@@ -330,7 +341,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             modelLoaded = false
             let status: Status = busy.map { .working($0) } ?? .offline
             header.update(model: "MLX Server", detail: "\(serverBase) not responding", status: status)
-            for row in [decodeRow, prefillRow, memoryRow, cacheRow] { row.set(nil) }
+            for row in [decodeRow, prefillRow, memoryRow, cacheRow, contextRow] { row.set(nil) }
             stopPulse()
             setBarIcon(busy != nil ? "hourglass" : "brain", dim: busy == nil)
             if busy == nil { syncMemoryLimit(loaded: false, current: readWiredLimitMB()) }
@@ -398,6 +409,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let detail = hasDrafter ? "8-bit · MTP drafter" : "8-bit"
         header.update(model: modelName, detail: detail, status: status)
 
+        let ctx = contextSize(recent: root["recent"] as? [[String: Any]] ?? [], prefillTotal: generating ? prefillTotal : 0)
+        var ctxAlert: String?
+        if modelLoaded, let ctx {
+            let label = compactTokens(ctx.tokens)
+            if ctx.tokens >= ctxNew {
+                contextRow.set("\(label) · start new session", color: .systemRed)
+                if ctx.age < ctxStaleAfter { ctxAlert = "\(ctx.tokens / 1000)K" }
+            } else if ctx.tokens >= ctxWarn {
+                contextRow.set("\(label) · getting slower", color: .systemOrange)
+            } else {
+                contextRow.set(label, color: .systemGreen)
+            }
+        } else {
+            contextRow.set(nil)
+        }
+
         if case .generating = status {
             if liveDecode == 0, let pct = prefillPercent {
                 startPulse(label: "PROMPT", value: String(format: "%.0f%%", pct))
@@ -409,7 +436,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             switch status {
             case .working: setBarIcon("hourglass")
             case .unloaded: setBarIcon("brain", dim: true)
-            default: setBarIcon("brain.fill")
+            default:
+                if let alert = ctxAlert {
+                    setBarIcon("brain.fill", label: "CONTEXT", value: alert, tint: .systemOrange)
+                } else {
+                    setBarIcon("brain.fill")
+                }
             }
         }
         syncMemoryLimit(loaded: modelLoaded, current: wiredMB)
@@ -437,6 +469,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return name.replacingOccurrences(of: "-", with: " ")
             .replacingOccurrences(of: " 8bit", with: "")
             .replacingOccurrences(of: " MLX", with: "")
+    }
+
+    // Agents also send small side requests (titles, summaries), so the session size is the
+    // largest prompt among requests finished within 2 minutes of the newest one, or the
+    // prompt currently being read if that is larger.
+    func contextSize(recent: [[String: Any]], prefillTotal: Int) -> (tokens: Int, age: TimeInterval)? {
+        let done = recent.compactMap { r -> (t: Double, n: Int)? in
+            guard let t = (r["timestamp_unix"] as? NSNumber)?.doubleValue,
+                  let n = (r["prompt_tokens"] as? NSNumber)?.intValue else { return nil }
+            return (t, n)
+        }
+        let now = Date().timeIntervalSince1970
+        guard let newest = done.map(\.t).max() else {
+            return prefillTotal > 0 ? (prefillTotal, 0) : nil
+        }
+        let session = done.filter { newest - $0.t <= 120 }.map(\.n).max() ?? 0
+        if prefillTotal > session { return (prefillTotal, 0) }
+        return (session, prefillTotal > 0 ? 0 : now - newest)
+    }
+
+    func compactTokens(_ n: Int) -> String {
+        n >= 1000 ? String(format: "%.1fK tokens", Double(n) / 1000) : "\(n) tokens"
     }
 
     func grouped(_ value: Double) -> String {
